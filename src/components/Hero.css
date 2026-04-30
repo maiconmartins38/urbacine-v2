@@ -156,23 +156,41 @@
 
 @media (max-width: 768px) {
   .hero {
-    height: 80vh;
+    height: 95vh; /* Aumentada a proporção vertical */
     align-items: flex-end;
-    padding-bottom: 10vh;
+    padding-bottom: 12vh;
+  }
+
+  .hero-image {
+    opacity: 0.9; /* Cores mais vivas/visíveis */
+    filter: saturate(1.3) contrast(1.1); /* Intensifica as cores */
+  }
+
+  .hero-overlay-v {
+    /* Gradiente mais suave no mobile para não escurecer tanto a imagem */
+    background: linear-gradient(to top, var(--dark-bg) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.1) 100%);
   }
 
   .hero-overlay-h {
-    background: linear-gradient(to top, var(--dark-bg) 0%, rgba(0,0,0,0.5) 100%);
+    background: linear-gradient(to top, var(--dark-bg) 0%, rgba(0,0,0,0.4) 100%);
   }
 
   .hero-content {
     text-align: center;
     margin: 0 auto;
+    padding: 0 15px;
   }
 
   .hero-badge {
     margin-left: auto;
     margin-right: auto;
+    font-size: 0.75rem;
+    padding: 6px 18px;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
   }
 
   .hero-buttons {
@@ -194,6 +212,7 @@
 
   .hero-meta {
     justify-content: center;
+    margin-bottom: 18px;
   }
 
   .hero-overview {
@@ -202,5 +221,7 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     font-size: 1rem;
+    color: #eee;
+    margin-bottom: 25px;
   }
 }
