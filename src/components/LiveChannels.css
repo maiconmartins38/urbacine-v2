@@ -60,7 +60,7 @@
 
 .brand-logo-container {
   height: 180px;
-  background: #111;
+  background: #000;
   border-radius: 20px;
   display: flex;
   align-items: center;
@@ -68,25 +68,30 @@
   position: relative;
   margin-bottom: 25px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .brand-logo-placeholder {
   width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 30px;
 }
 
-.brand-svg-logo {
-  width: 75%;
-  max-height: 140px;
+.brand-official-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* GARANTE QUE NÃO HÁ FILTROS QUE TIREM A COR */
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
-  filter: drop-shadow(0 0 10px rgba(255,255,255,0.05));
 }
 
-.brand-card:hover .brand-svg-logo {
-  transform: scale(1.12);
-  filter: drop-shadow(0 0 25px var(--accent-color));
+.brand-card:hover .brand-official-logo {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2));
 }
 
 .brand-info {
@@ -151,5 +156,6 @@
 
   .brand-logo-container {
     height: 140px;
+    padding: 20px;
   }
 }

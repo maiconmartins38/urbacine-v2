@@ -1,6 +1,21 @@
 import React from 'react';
 import './LiveChannels.css';
 
+const brands = [
+  { 
+    name: 'Samsung', 
+    subtitle: 'Smart TV', 
+    color: '#1428a0',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Samsung_Logo.svg/1024px-Samsung_Logo.svg.png'
+  },
+  { 
+    name: 'LG', 
+    subtitle: 'Smart TV', 
+    color: '#a50034',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/LG_logo_%282015%29.svg/1024px-LG_logo_%282015%29.svg.png'
+  }
+];
+
 const LiveChannels = () => {
   return (
     <section className="live-channels-section">
@@ -11,51 +26,24 @@ const LiveChannels = () => {
 
       <div className="channels-grid-wrapper">
         <div className="brands-grid">
-          
-          {/* Samsung Card */}
-          <div className="brand-card">
-            <div className="brand-logo-container" style={{ '--accent-color': '#1428a0' }}>
-              <div className="brand-logo-placeholder">
-                <svg className="brand-svg-logo" viewBox="0 0 600 100" xmlns="http://www.w3.org/2000/svg">
-                  <text x="300" y="72" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="80" fontWeight="700" letterSpacing="12" fill="#1428a0">
-                    SAMSUNG
-                  </text>
-                </svg>
+          {brands.map((brand, index) => (
+            <div key={index} className="brand-card">
+              <div className="brand-logo-container" style={{ '--accent-color': brand.color }}>
+                <div className="brand-logo-placeholder">
+                  <img 
+                    src={brand.logo} 
+                    alt={brand.name} 
+                    className="brand-official-logo"
+                    crossOrigin="anonymous"
+                  />
+                </div>
+              </div>
+              <div className="brand-info">
+                <span className="brand-name">{brand.name}</span>
+                <span className="brand-subtitle">{brand.subtitle}</span>
               </div>
             </div>
-            <div className="brand-info">
-              <span className="brand-name">Samsung</span>
-              <span className="brand-subtitle">Smart TV</span>
-            </div>
-          </div>
-
-          {/* LG Card */}
-          <div className="brand-card">
-            <div className="brand-logo-container" style={{ '--accent-color': '#a50034' }}>
-              <div className="brand-logo-placeholder">
-                <svg className="brand-svg-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                  {/* Círculo externo */}
-                  <circle cx="100" cy="100" r="88" fill="none" stroke="#a50034" strokeWidth="8"/>
-                  {/* L shape */}
-                  <rect x="68" y="50" width="14" height="70" rx="2" fill="#a50034"/>
-                  <rect x="68" y="106" width="42" height="14" rx="2" fill="#a50034"/>
-                  {/* Nariz (bolinha) */}
-                  <circle cx="110" cy="70" r="10" fill="#a50034"/>
-                  {/* G shape - arco */}
-                  <path d="M 126 86 A 34 34 0 1 1 94 140" fill="none" stroke="#a50034" strokeWidth="12" strokeLinecap="round"/>
-                  {/* Texto LG abaixo */}
-                  <text x="100" y="185" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="36" fontWeight="900" fill="#a50034">
-                    LG
-                  </text>
-                </svg>
-              </div>
-            </div>
-            <div className="brand-info">
-              <span className="brand-name">LG</span>
-              <span className="brand-subtitle">Smart TV</span>
-            </div>
-          </div>
-
+          ))}
         </div>
       </div>
       
