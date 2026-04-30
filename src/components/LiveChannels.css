@@ -31,154 +31,84 @@
   justify-content: center;
 }
 
-.channels-grid-wrapper::-webkit-scrollbar {
-  display: none;
-}
-
-.channels-grid {
+/* Brands Grid - 2 cards grandes lado a lado */
+.brands-grid {
   display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+  gap: 40px;
   justify-content: center;
-  max-width: 1200px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.channel-card {
-  width: 200px;
+.brand-card {
+  width: 350px;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 15px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 30px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  text-align: center;
 }
 
-.channel-card:hover {
+.brand-card:hover {
   transform: translateY(-10px);
   background: rgba(255, 255, 255, 0.07);
   border-color: var(--accent-color);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px var(--accent-color);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 25px var(--accent-color);
 }
 
-.channel-logo-container {
-  height: 120px;
+.brand-logo-container {
+  height: 180px;
   background: #111;
-  border-radius: 12px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  margin-bottom: 15px;
+  margin-bottom: 25px;
   overflow: hidden;
 }
 
-.channel-official-logo {
-  max-width: 85%;
-  max-height: 80px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.channel-card:hover .channel-official-logo {
-  transform: scale(1.15);
-  filter: drop-shadow(0 0 20px rgba(255,255,255,0.3));
-}
-
-.logo-light {
-  filter: brightness(0) invert(1) drop-shadow(0 0 10px rgba(255,255,255,0.1));
-}
-
-.channel-card:hover .logo-light {
-  filter: brightness(0) invert(1) drop-shadow(0 0 20px rgba(255,255,255,0.3));
-}
-
-.channel-logo-placeholder {
+.brand-logo-placeholder {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.channel-name-text {
+.brand-official-logo {
+  max-width: 65%;
+  max-height: 120px;
+  object-fit: contain;
+  filter: brightness(0) invert(1) drop-shadow(0 0 15px rgba(255,255,255,0.15));
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.brand-card:hover .brand-official-logo {
+  transform: scale(1.15);
+  filter: brightness(0) invert(1) drop-shadow(0 0 30px rgba(255,255,255,0.35));
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.brand-name {
+  font-size: 1.4rem;
+  color: #fff;
   font-weight: 800;
-  font-size: 1rem;
   letter-spacing: 1px;
 }
 
-.channel-text-logo {
-  font-weight: 900;
-  font-size: 1.4rem;
-  letter-spacing: 3px;
-  text-align: center;
-  line-height: 1.2;
-  white-space: pre-line;
-  text-shadow: 0 0 15px currentColor;
-  transition: all 0.4s ease;
-}
-
-.channel-card:hover .channel-text-logo {
-  text-shadow: 0 0 25px currentColor, 0 0 50px currentColor;
-  transform: scale(1.1);
-}
-
-.live-indicator {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: #ff0000;
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 900;
-  padding: 2px 8px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  z-index: 2;
-}
-
-.pulse-dot {
-  width: 6px;
-  height: 6px;
-  background: white;
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.5); opacity: 0.5; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.channel-info {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.channel-cat {
-  font-size: 0.75rem;
+.brand-subtitle {
+  font-size: 0.85rem;
   color: #666;
   text-transform: uppercase;
   font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.channel-progress {
-  height: 4px;
-  background: #222;
-  border-radius: 2px;
-  width: 100%;
-}
-
-.progress-bar {
-  height: 100%;
-  background: var(--accent-color);
-  width: 45%;
-  border-radius: 2px;
+  letter-spacing: 2px;
 }
 
 .live-cta-container {
@@ -208,10 +138,19 @@
   .live-title {
     font-size: 1.8rem;
   }
-  .channel-card {
-    width: 160px;
+
+  .brands-grid {
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
   }
-  .channel-logo-container {
-    height: 100px;
+
+  .brand-card {
+    width: 100%;
+    max-width: 350px;
+  }
+
+  .brand-logo-container {
+    height: 140px;
   }
 }
