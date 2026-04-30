@@ -6,15 +6,13 @@ const brands = [
     name: 'Samsung', 
     subtitle: 'Smart TV', 
     color: '#1428a0',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg',
-    light: true
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg'
   },
   { 
     name: 'LG', 
     subtitle: 'Smart TV', 
     color: '#a50034',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/2/20/LG_symbol.svg',
-    light: true
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/b/bf/LG_logo_%282015%29.svg'
   }
 ];
 

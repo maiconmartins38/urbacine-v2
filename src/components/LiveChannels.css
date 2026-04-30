@@ -81,13 +81,13 @@
   max-width: 65%;
   max-height: 120px;
   object-fit: contain;
-  filter: brightness(0) invert(1) drop-shadow(0 0 15px rgba(255,255,255,0.15));
+  filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .brand-card:hover .brand-official-logo {
   transform: scale(1.15);
-  filter: brightness(0) invert(1) drop-shadow(0 0 30px rgba(255,255,255,0.35));
+  filter: drop-shadow(0 0 30px rgba(255,255,255,0.25));
 }
 
 .brand-info {
