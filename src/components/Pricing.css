@@ -155,8 +155,7 @@
 }
 
 .pricing-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #080808;
   border-radius: 32px;
   padding: 50px 30px;
   position: relative;
@@ -166,19 +165,54 @@
   align-items: center;
   text-align: center;
   backdrop-filter: blur(10px);
-  height: 100%; /* Garante que todos os cards tenham a mesma altura no grid */
+  height: 100%;
+  overflow: hidden;
+  z-index: 1;
 }
 
-.pricing-card.highlight {
-  background: linear-gradient(145deg, rgba(229, 9, 20, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border-color: rgba(229, 9, 20, 0.3);
-  box-shadow: 0 20px 60px -20px rgba(229, 9, 20, 0.2);
+/* Brilho Animado ao redor dos cards */
+.pricing-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    transparent, 
+    transparent, 
+    transparent, 
+    rgba(255, 255, 255, 0.1)
+  );
+  animation: rotate 6s linear infinite;
+  z-index: -2;
+}
+
+.pricing-card.highlight::before {
+  background: conic-gradient(
+    transparent, 
+    transparent, 
+    transparent, 
+    var(--netflix-red)
+  );
+}
+
+.pricing-card::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: #080808;
+  border-radius: 30px;
+  z-index: -1;
 }
 
 .pricing-card:hover {
   transform: translateY(-15px);
-  border-color: rgba(229, 9, 20, 0.5);
-  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+}
+
+.pricing-card.highlight:hover {
+  box-shadow: 0 0 50px rgba(229, 9, 20, 0.3);
 }
 
 .popular-badge {
@@ -193,6 +227,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1px;
+  z-index: 2;
 }
 
 .pricing-icon {
@@ -232,7 +267,7 @@
   font-size: 0.9rem;
   margin-bottom: 25px;
   line-height: 1.5;
-  min-height: 3rem; /* Garante altura mínima para o texto explicativo */
+  min-height: 3rem;
 }
 
 .price-container {
@@ -310,22 +345,30 @@
   justify-content: center;
   gap: 12px;
   transition: all 0.3s ease;
-  margin-top: auto; /* Empurra o botão para a base do card */
+  margin-top: auto;
+  animation: btn-pulse 2s infinite ease-in-out;
+}
+
+@keyframes btn-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 .pricing-card.highlight .btn-pricing {
   background: #e50914;
   color: #fff;
+  box-shadow: 0 0 15px rgba(229, 9, 20, 0.4);
 }
 
 .btn-pricing:hover {
-  transform: scale(1.02);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  animation-play-state: paused;
+  transform: scale(1.08) !important;
 }
 
 .pricing-card.highlight .btn-pricing:hover {
   background: #ff1a25;
-  box-shadow: 0 10px 30px rgba(229, 9, 20, 0.4);
+  box-shadow: 0 10px 30px rgba(229, 9, 20, 0.6);
 }
 
 .pricing-grid {
