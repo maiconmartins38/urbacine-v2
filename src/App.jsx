@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Hero from './components/Hero';
 import MovieRow from './components/MovieRow';
 import { tmdbApi } from './services/tmdb';
-import { Menu, Play } from 'lucide-react';
+import { Menu, Play, X } from 'lucide-react';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import PrivacyModal from './components/PrivacyModal';
@@ -15,6 +15,7 @@ import './App.css';
 
 const Header = ({ onOpenPrivacy, scrollToSection }) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,42 +25,87 @@ const Header = ({ onOpenPrivacy, scrollToSection }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+    if (!isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  };
+
+  const handleNavClick = (section) => {
+    setIsMenuOpen(false);
+    document.body.style.overflow = 'unset';
+    if (section === 'top') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      scrollToSection(section);
+    }
+  };
+
   return (
-    <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="header-inner">
-        <div className="header-left">
-          <a href="/" className="logo-link">
-            <div className="logo-container">
-              <div className="logo-icon">
-                <Play size={16} fill="var(--netflix-red)" color="var(--netflix-red)" />
+    <>
+      <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="header-inner">
+          <div className="header-left">
+            <a href="/" className="logo-link">
+              <div className="logo-container">
+                <div className="logo-icon">
+                  <Play size={16} fill="var(--netflix-red)" color="var(--netflix-red)" />
+                </div>
+                <h2 className="logo">URBA <span>CINE</span></h2>
               </div>
-              <h2 className="logo">URBA <span>CINE</span></h2>
+            </a>
+          </div>
+
+          <nav className="desktop-nav">
+            <ul>
+              <li className="active" onClick={() => handleNavClick('top')} style={{ cursor: 'pointer' }}>Início</li>
+              <li onClick={() => handleNavClick('recursos')} style={{ cursor: 'pointer' }}>Recursos</li>
+              <li onClick={() => handleNavClick('mensalidade')} style={{ cursor: 'pointer' }}>Mensalidade</li>
+              <li onClick={() => handleNavClick('faq')} style={{ cursor: 'pointer' }}>Dúvidas</li>
+            </ul>
+          </nav>
+
+          <div className="header-right">
+            <a 
+              href="https://wa.me/+554791391083?text=Ol%C3%A1%2C%20gostaria%20de%20um%20teste%20no%20aplicativo." 
+              className="btn-cta"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Teste agora mesmo.
+            </a>
+            <div className="mobile-toggle" onClick={toggleMenu}>
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
             </div>
-          </a>
+          </div>
         </div>
+      </header>
 
-        <nav className="desktop-nav">
+      {/* Mobile Menu Overlay */}
+      <div className={`mobile-menu-overlay ${isMenuOpen ? 'open' : ''}`}>
+        <nav className="mobile-nav">
           <ul>
-            <li className="active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ cursor: 'pointer' }}>Início</li>
-            <li onClick={() => scrollToSection('recursos')} style={{ cursor: 'pointer' }}>Recursos</li>
-            <li onClick={() => scrollToSection('mensalidade')} style={{ cursor: 'pointer' }}>Mensalidade</li>
-            <li onClick={() => scrollToSection('faq')} style={{ cursor: 'pointer' }}>Dúvidas</li>
+            <li onClick={() => handleNavClick('top')}>Início</li>
+            <li onClick={() => handleNavClick('recursos')}>Recursos</li>
+            <li onClick={() => handleNavClick('mensalidade')}>Mensalidade</li>
+            <li onClick={() => handleNavClick('faq')}>Dúvidas</li>
           </ul>
+          <div className="mobile-menu-footer">
+            <a 
+              href="https://wa.me/+554791391083?text=Ol%C3%A1%2C%20gostaria%20de%20um%20teste%20no%20aplicativo." 
+              className="btn-cta-mobile"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Teste agora mesmo
+            </a>
+          </div>
         </nav>
-
-        <div className="header-right">
-          <a 
-            href="https://wa.me/+554791391083?text=Ol%C3%A1%2C%20gostaria%20de%20um%20teste%20no%20aplicativo." 
-            className="btn-cta"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Teste agora mesmo.
-          </a>
-          <Menu size={24} className="mobile-menu-icon" />
-        </div>
       </div>
-    </header>
+    </>
   );
 };
 
