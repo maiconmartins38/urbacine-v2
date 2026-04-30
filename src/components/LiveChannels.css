@@ -42,25 +42,57 @@
 
 .brand-card {
   width: 350px;
-  background: rgba(255, 255, 255, 0.03);
+  background: #080808;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 30px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Efeito de Raio/Brilho Animado (Moderno) */
+.brand-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    transparent, 
+    transparent, 
+    transparent, 
+    var(--accent-color)
+  );
+  animation: rotate 4s linear infinite;
+  z-index: -2;
+}
+
+.brand-card::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: #080808;
+  border-radius: 22px;
+  z-index: -1;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .brand-card:hover {
   transform: translateY(-10px);
-  background: rgba(255, 255, 255, 0.07);
-  border-color: var(--accent-color);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 25px var(--accent-color);
+  box-shadow: 0 0 30px var(--accent-color);
 }
 
 .brand-logo-container {
   height: 180px;
-  background: #000;
+  background: rgba(255, 255, 255, 0.02);
   border-radius: 20px;
   display: flex;
   align-items: center;
@@ -68,7 +100,6 @@
   position: relative;
   margin-bottom: 25px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .brand-logo-placeholder {
@@ -83,13 +114,12 @@
 svg {
   max-width: 100%;
   max-height: 100%;
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.3));
 }
 
 .brand-card:hover svg {
   transform: scale(1.1);
-  filter: drop-shadow(0 0 20px var(--accent-color));
 }
 
 .brand-info {
@@ -137,23 +167,47 @@ svg {
 }
 
 @media (max-width: 768px) {
+  .live-channels-section {
+    padding: 60px 4%;
+  }
+
   .live-title {
     font-size: 1.8rem;
   }
 
   .brands-grid {
-    flex-direction: column;
-    align-items: center;
-    gap: 25px;
+    flex-direction: row; /* Lado a lado */
+    align-items: stretch;
+    gap: 15px;
+    padding: 0 5px;
   }
 
   .brand-card {
-    width: 100%;
-    max-width: 350px;
+    width: 50%;
+    padding: 15px 10px;
+    border-radius: 16px;
+  }
+
+  .brand-card::after {
+    border-radius: 14px;
   }
 
   .brand-logo-container {
-    height: 140px;
-    padding: 20px;
+    height: 100px;
+    margin-bottom: 12px;
+    padding: 10px;
+  }
+
+  .brand-logo-placeholder {
+    padding: 10px;
+  }
+
+  .brand-name {
+    font-size: 1rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.7rem;
+    letter-spacing: 1px;
   }
 }
