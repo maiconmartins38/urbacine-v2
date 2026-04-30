@@ -1,0 +1,165 @@
+.movie-card {
+  flex: 0 0 auto;
+  width: 190px;
+  position: relative;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: var(--dark-surface);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.movie-card:hover {
+  border-color: var(--netflix-red);
+  box-shadow: 0 0 20px rgba(229, 9, 20, 0.3);
+}
+
+.movie-card-poster {
+  width: 100%;
+  height: 285px;
+  object-fit: cover;
+  display: block;
+  transition: filter 0.4s ease, opacity 0.4s ease;
+}
+
+.movie-card-poster.loading {
+  opacity: 0;
+}
+
+.movie-card-poster.loaded {
+  opacity: 1;
+}
+
+.movie-card-skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 285px;
+  background: linear-gradient(110deg, #1a1a1a 8%, #2a2a2a 18%, #1a1a1a 33%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.movie-card:hover .movie-card-poster {
+  filter: brightness(0.6);
+}
+
+.movie-card-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 20px 15px;
+  background: linear-gradient(to top, 
+    rgba(0,0,0,1) 0%, 
+    rgba(0,0,0,0.8) 40%, 
+    transparent 100%);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.movie-card:hover .movie-card-info {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.play-btn-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.play-btn-circle:hover {
+  transform: scale(1.15);
+  background: var(--netflix-red);
+}
+
+.play-btn-circle:hover svg {
+  fill: white !important;
+}
+
+.card-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #46d369;
+  font-weight: 800;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(70, 211, 105, 0.3);
+}
+
+.movie-card-title {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: white;
+  line-height: 1.2;
+}
+
+.movie-card-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+  align-items: center;
+}
+
+.card-hd {
+  border: 1px solid rgba(255,255,255,0.4);
+  padding: 1px 6px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .movie-card {
+    width: 140px;
+  }
+  .movie-card-poster {
+    height: 210px;
+  }
+  .movie-card-info {
+    opacity: 1;
+    transform: translateY(0);
+    padding: 10px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+    backdrop-filter: none;
+  }
+  .play-btn-circle {
+    width: 30px;
+    height: 30px;
+  }
+  .movie-card-title {
+    font-size: 0.85rem;
+  }
+}

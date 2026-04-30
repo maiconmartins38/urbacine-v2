@@ -1,0 +1,75 @@
+.cookie-consent-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: rgba(18, 18, 18, 0.98);
+  border-top: 1px solid rgba(229, 9, 20, 0.3);
+  padding: 20px 0;
+  z-index: 3000;
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.cookie-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 4%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+}
+
+.cookie-text p {
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.privacy-link-btn {
+  background: none;
+  border: none;
+  color: var(--netflix-red);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.btn-accept-cookies {
+  background-color: var(--netflix-red);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 4px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.btn-accept-cookies:hover {
+  background-color: #b20710;
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .cookie-container {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+
+  .btn-accept-cookies {
+    width: 100%;
+  }
+}
