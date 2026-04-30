@@ -67,7 +67,7 @@ const LiveChannels = () => {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Solicitar Instalação
+          Teste agora mesmo
         </a>
       </div>
     </section>
