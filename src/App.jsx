@@ -1,37 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Hero from './components/Hero';
-import MovieRow from './components/MovieRow';
 import { tmdbApi } from './services/tmdb';
 import { Menu, Play, X } from 'lucide-react';
-import Footer from './components/Footer';
-import WhatsAppButton from './components/WhatsAppButton';
-import PrivacyModal from './components/PrivacyModal';
-import CookieConsent from './components/CookieConsent';
-import LiveChannels from './components/LiveChannels';
-import FAQ from './components/FAQ';
-import Features from './components/Features';
-import Pricing from './components/Pricing';
 import './App.css';
 
-const Header = ({ onOpenPrivacy, scrollToSection }) => {
+// Lazy loading components that are not visible on initial load
+const MovieRow = lazy(() => import('./components/MovieRow'));
+const LiveChannels = lazy(() => import('./components/LiveChannels'));
+const FAQ = lazy(() => import('./components/FAQ'));
+const Features = lazy(() => import('./components/Features'));
+const Pricing = lazy(() => import('./components/Pricing'));
+const Footer = lazy(() => import('./components/Footer'));
+const WhatsAppButton = lazy(() => import('./components/WhatsAppButton'));
+const PrivacyModal = lazy(() => import('./components/PrivacyModal'));
+const CookieConsent = lazy(() => import('./components/CookieConsent'));
+
+const Header = ({ scrollToSection }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
+      setIsScrolled(window.scrollY > 10);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
-    if (!isMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    document.body.style.overflow = !isMenuOpen ? 'hidden' : 'unset';
   };
 
   const handleNavClick = (section) => {
@@ -49,7 +47,7 @@ const Header = ({ onOpenPrivacy, scrollToSection }) => {
       <header className={`header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="header-inner">
           <div className="header-left">
-            <a href="/" className="logo-link">
+            <a href="/" className="logo-link" aria-label="UrbaCine Início">
               <div className="logo-container">
                 <div className="logo-icon">
                   <Play size={16} fill="var(--netflix-red)" color="var(--netflix-red)" />
@@ -74,17 +72,22 @@ const Header = ({ onOpenPrivacy, scrollToSection }) => {
               className="btn-cta"
               target="_blank"
               rel="noopener noreferrer"
+              aria-label="Pedir teste pelo WhatsApp"
             >
               Teste agora mesmo.
             </a>
-            <div className="mobile-toggle" onClick={toggleMenu}>
+            <button 
+              className="mobile-toggle" 
+              onClick={toggleMenu}
+              aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={isMenuOpen}
+            >
               {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
-            </div>
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
       <div className={`mobile-menu-overlay ${isMenuOpen ? 'open' : ''}`}>
         <nav className="mobile-nav">
           <ul>
@@ -133,33 +136,38 @@ function App() {
 
   return (
     <div className="app">
-      <Header onOpenPrivacy={openPrivacyModal} scrollToSection={scrollToSection} />
+      <Header scrollToSection={scrollToSection} />
       <main>
         <Hero scrollToSection={scrollToSection} />
         
-        <div className="content-rows">
-          <MovieRow title="Conteúdos sempre atualizados" fetchFn={tmdbApi.getTrending} />
-          <MovieRow title="Categorias como você nunca viu" fetchFn={tmdbApi.getNowPlaying} />
-          <MovieRow title="Séries de Sucesso" fetchFn={tmdbApi.getSeries} />
-          <MovieRow title="Mais Votados" fetchFn={tmdbApi.getTopRated} />
-          <MovieRow title="Tops em alta" fetchFn={tmdbApi.getUpcoming} />
-        </div>
+        <Suspense fallback={<div className="section-loader" />}>
+          <div className="content-rows">
+            <MovieRow title="Conteúdos sempre atualizados" fetchFn={tmdbApi.getTrending} />
+            <MovieRow title="Categorias como você nunca viu" fetchFn={tmdbApi.getNowPlaying} />
+            <MovieRow title="Séries de Sucesso" fetchFn={tmdbApi.getSeries} />
+            <MovieRow title="Mais Votados" fetchFn={tmdbApi.getTopRated} />
+            <MovieRow title="Tops em alta" fetchFn={tmdbApi.getUpcoming} />
+          </div>
 
-        <LiveChannels />
-        <FAQ />
-        <Features />
-        <Pricing />
+          <LiveChannels />
+          <FAQ />
+          <Features />
+          <Pricing />
+        </Suspense>
       </main>
 
-      <Footer onOpenPrivacy={openPrivacyModal} scrollToSection={scrollToSection} />
-      <WhatsAppButton />
-      <CookieConsent onOpenPrivacy={openPrivacyModal} />
-      <PrivacyModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} />
+      <Suspense fallback={null}>
+        <Footer onOpenPrivacy={openPrivacyModal} scrollToSection={scrollToSection} />
+        <WhatsAppButton />
+        <CookieConsent onOpenPrivacy={openPrivacyModal} />
+        <PrivacyModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} />
+      </Suspense>
     </div>
   );
 }
 
 export default App;
+
 
 
 

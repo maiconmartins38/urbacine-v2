@@ -5,21 +5,48 @@ import './MovieRow.css';
 
 const MovieRow = React.memo(({ title, fetchFn, autoPlay = true }) => {
   const [movies, setMovies] = useState([]);
+  const [isVisible, setIsVisible] = useState(false);
   const rowRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Intersection Observer to detect visibility
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' } // Começa a carregar 200px antes de aparecer
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
+    if (!isVisible) return;
+
     let cancelled = false;
     const loadMovies = async () => {
-      const data = await fetchFn();
-      if (!cancelled) setMovies(data);
+      try {
+        const data = await fetchFn();
+        if (!cancelled) setMovies(data);
+      } catch (error) {
+        console.error("Erro ao carregar filmes:", error);
+      }
     };
     loadMovies();
     return () => { cancelled = true; };
-  }, [fetchFn]);
+  }, [fetchFn, isVisible]);
 
   // Auto-scrolling logic
   useEffect(() => {
-    if (!autoPlay || movies.length === 0) return;
+    if (!autoPlay || movies.length === 0 || !isVisible) return;
 
     const interval = setInterval(() => {
       if (rowRef.current) {
@@ -32,10 +59,10 @@ const MovieRow = React.memo(({ title, fetchFn, autoPlay = true }) => {
           rowRef.current.scrollTo({ left: scrollLeft + 300, behavior: 'smooth' });
         }
       }
-    }, 5000);
+    }, 6000); // Aumentado para 6s para menos processamento
 
     return () => clearInterval(interval);
-  }, [autoPlay, movies]);
+  }, [autoPlay, movies, isVisible]);
 
   const scroll = useCallback((direction) => {
     if (rowRef.current) {
@@ -48,28 +75,31 @@ const MovieRow = React.memo(({ title, fetchFn, autoPlay = true }) => {
     }
   }, []);
 
-  if (movies.length === 0) return null;
-
   return (
-    <div className="movie-row-container">
+    <div className="movie-row-container" ref={containerRef} style={{ minHeight: '200px' }}>
       <div className="row-header">
         <h2 className="row-title">{title}</h2>
       </div>
       
       <div className="row-wrapper">
-        <button className="row-nav nav-left" onClick={() => scroll('left')} aria-label="Anterior">
-          <ChevronLeft size={32} />
-        </button>
-        
-        <div className="movie-row" ref={rowRef}>
-          {movies.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} />
-          ))}
-        </div>
+        {movies.length > 0 && (
+          <>
+            <button className="row-nav nav-left" onClick={() => scroll('left')} aria-label="Ver filmes anteriores">
+              <ChevronLeft size={32} />
+            </button>
+            
+            <div className="movie-row" ref={rowRef}>
+              {movies.map((movie) => (
+                <MovieCard key={movie.id} movie={movie} />
+              ))}
+            </div>
 
-        <button className="row-nav nav-right" onClick={() => scroll('right')} aria-label="Próximo">
-          <ChevronRight size={32} />
-        </button>
+            <button className="row-nav nav-right" onClick={() => scroll('right')} aria-label="Ver mais filmes">
+              <ChevronRight size={32} />
+            </button>
+          </>
+        )}
+        {movies.length === 0 && isVisible && <div className="row-skeleton" />}
       </div>
     </div>
   );
@@ -78,3 +108,4 @@ const MovieRow = React.memo(({ title, fetchFn, autoPlay = true }) => {
 MovieRow.displayName = 'MovieRow';
 
 export default MovieRow;
+

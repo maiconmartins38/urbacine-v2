@@ -145,7 +145,7 @@
     align-items: flex-start;
   }
 
-  .footer-column li a, .footer-link {
+  .footer-column li a, .footer-link, .footer-link-btn {
     font-size: 0.85rem;
   }
 }

@@ -6,9 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UrbaCine</title>
     <meta name="description" content="A melhor experiência de streaming com catálogo atualizado do TMDB." />
+    
+    <!-- Resource Hints para acelerar o carregamento -->
+    <link rel="preconnect" href="https://api.themoviedb.org" />
+    <link rel="preconnect" href="https://image.tmdb.org" />
+    <link rel="dns-prefetch" href="https://api.themoviedb.org" />
+    <link rel="dns-prefetch" href="https://image.tmdb.org" />
+    
+    <!-- Preload crítico para evitar Flash of Invisible Text -->
+    <link rel="preload" href="/src/main.jsx" as="script" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
+

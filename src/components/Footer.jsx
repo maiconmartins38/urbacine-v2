@@ -19,22 +19,26 @@ const Footer = ({ onOpenPrivacy, scrollToSection }) => {
             A melhor solução de streaming do mercado, qualidade, estabilidade e o melhor preço de entrega e qualidade.
           </p>
           <div className="social-icons">
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="social-btn"><MessageCircle size={20} /></a>
-            <a href="#" className="social-btn">
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="social-btn" aria-label="Contato via WhatsApp">
+              <MessageCircle size={20} />
+            </a>
+            <a href="#" className="social-btn" aria-label="Siga-nos no Instagram">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
             </a>
-            <a href="#" className="social-btn"><Send size={20} /></a>
+            <a href="#" className="social-btn" aria-label="Canal no Telegram">
+              <Send size={20} />
+            </a>
           </div>
         </div>
 
         <div className="footer-column">
           <h3>Navegação</h3>
           <ul>
-            <li><span className="footer-link" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Início</span></li>
-            <li><span className="footer-link" onClick={() => scrollToSection('recursos')}>Recursos</span></li>
-            <li><span className="footer-link" onClick={() => scrollToSection('mensalidade')}>Planos</span></li>
-            <li><span className="footer-link" onClick={() => scrollToSection('faq')}>Dúvidas</span></li>
-            <li><span className="footer-link" onClick={onOpenPrivacy}>Política de Privacidade</span></li>
+            <li><button className="footer-link-btn" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Início</button></li>
+            <li><button className="footer-link-btn" onClick={() => scrollToSection('recursos')}>Recursos</button></li>
+            <li><button className="footer-link-btn" onClick={() => scrollToSection('mensalidade')}>Planos</button></li>
+            <li><button className="footer-link-btn" onClick={() => scrollToSection('faq')}>Dúvidas</button></li>
+            <li><button className="footer-link-btn" onClick={onOpenPrivacy}>Política de Privacidade</button></li>
           </ul>
         </div>
 
@@ -53,3 +57,4 @@ const Footer = ({ onOpenPrivacy, scrollToSection }) => {
 };
 
 export default Footer;
+

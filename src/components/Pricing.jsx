@@ -3,7 +3,7 @@ import { Smartphone, Tv, Check, Zap, Play } from 'lucide-react';
 import './Pricing.css';
 
 const AndroidIcon = ({ size = 40 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M17.523 15.3414C17.0621 15.3414 16.6917 14.9711 16.6917 14.5101C16.6917 14.0492 17.0621 13.6788 17.523 13.6788C17.984 13.6788 18.3543 14.0492 18.3543 14.5101C18.3543 14.9711 17.984 15.3414 17.523 15.3414ZM6.47702 15.3414C6.01605 15.3414 5.64572 14.9711 5.64572 14.5101C5.64572 14.0492 6.01605 13.6788 6.47702 13.6788C6.93798 13.6788 7.30831 14.0492 7.30831 14.5101C7.30831 14.9711 6.93798 15.3414 6.47702 15.3414ZM17.893 10.3344L19.5759 7.42013C19.7042 7.19793 19.628 6.91353 19.4058 6.78523C19.1836 6.65693 18.8992 6.73308 18.7709 6.95528L17.0543 9.92843C15.6171 9.27113 13.9011 8.89733 12 8.89733C10.0989 8.89733 8.38287 9.27113 6.94572 9.92843L5.22913 6.95528C5.10082 6.73308 4.81643 6.65693 4.59422 6.78523C4.37202 6.91353 4.29587 7.19793 4.42417 7.42013L6.10702 10.3344C3.06015 11.9754 1.0044 15.1114 1.0044 18.7562H22.9956C22.9956 15.1114 20.9399 11.9754 17.893 10.3344Z"/>
   </svg>
 );
@@ -12,7 +12,7 @@ const PricingCard = ({ title, icon: Icon, features, price, subtitle, isHighlight
   return (
     <div className={`pricing-card ${isHighlight ? 'highlight' : ''}`}>
       {isHighlight && <div className="popular-badge">Mais Popular</div>}
-      <div className="pricing-icon">
+      <div className="pricing-icon" aria-hidden="true">
         {isAndroid ? <AndroidIcon /> : <Icon size={40} />}
       </div>
       <h3 className="pricing-title">{title}</h3>
@@ -28,7 +28,7 @@ const PricingCard = ({ title, icon: Icon, features, price, subtitle, isHighlight
       <ul className="pricing-features">
         {features.map((feature, index) => (
           <li key={index}>
-            <Check size={18} className="check-icon" />
+            <Check size={18} className="check-icon" aria-hidden="true" />
             <span>{feature}</span>
           </li>
         ))}
@@ -39,8 +39,9 @@ const PricingCard = ({ title, icon: Icon, features, price, subtitle, isHighlight
         className="btn-pricing"
         target="_blank"
         rel="noopener noreferrer"
+        aria-label={`Assinar plano ${title} por R$ ${price} por mês`}
       >
-        <Play size={20} fill="currentColor" />
+        <Play size={20} fill="currentColor" aria-hidden="true" />
         Testar agora mesmo
       </a>
       
@@ -73,7 +74,7 @@ const Pricing = () => {
       <div className="pricing-container">
         <div className="pricing-header">
           <div className="pricing-badge">
-            <Zap size={14} />
+            <Zap size={14} aria-hidden="true" />
             <span>Melhor Custo-Benefício</span>
           </div>
           <h2 className="pricing-section-title">Escolha seu Plano</h2>
@@ -81,7 +82,7 @@ const Pricing = () => {
             Tenha acesso ao melhor conteúdo do mundo por um valor que cabe no seu bolso.
           </p>
           <div className="pricing-free-trial">
-            <Zap size={18} />
+            <Zap size={18} aria-hidden="true" />
             <p>Você pode solicitar um teste gratuito. Basta entrar em contato e pedir seu teste antes de realizar a compra.</p>
           </div>
         </div>
@@ -109,4 +110,5 @@ const Pricing = () => {
 };
 
 export default Pricing;
+
 

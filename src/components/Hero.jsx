@@ -8,33 +8,42 @@ const Hero = ({ scrollToSection }) => {
   const [movies, setMovies] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchHeroData = async () => {
       const data = await tmdbApi.getNowPlaying();
       if (data.length > 0) {
-        const heroMovies = data.slice(0, 8); // 8 filmes (reduzido de 10 para menos consumo)
+        const heroMovies = data.slice(0, 5); 
         setMovies(heroMovies);
         
-        // Pré-carrega as 3 primeiras imagens imediatamente
-        heroMovies.slice(0, 3).forEach(m => {
-          if (m.backdrop_path) preloadImage(getImageUrl(m.backdrop_path));
-        });
+        // Pré-carrega a primeira imagem com o tamanho ideal
+        if (heroMovies[0]?.backdrop_path) {
+          const firstImageUrl = getImageUrl(heroMovies[0].backdrop_path, isMobile ? 'w780' : 'w1280');
+          preloadImage(firstImageUrl);
+        }
       }
       setLoading(false);
     };
 
     fetchHeroData();
-  }, []);
+  }, [isMobile]);
 
-  // Pré-carrega a próxima imagem antes da transição
   const preloadNext = useCallback((idx) => {
     const nextIdx = (idx + 1) % movies.length;
     const nextMovie = movies[nextIdx];
     if (nextMovie?.backdrop_path) {
-      preloadImage(getImageUrl(nextMovie.backdrop_path));
+      preloadImage(getImageUrl(nextMovie.backdrop_path, isMobile ? 'w780' : 'w1280'));
     }
-  }, [movies]);
+  }, [movies, isMobile]);
+...
 
   useEffect(() => {
     if (movies.length === 0) return;
@@ -45,7 +54,7 @@ const Hero = ({ scrollToSection }) => {
         preloadNext(newIndex);
         return newIndex;
       });
-    }, 5000);
+    }, 6000); // Aumentado para 6s para menos interrupções
 
     return () => clearInterval(interval);
   }, [movies, preloadNext]);
@@ -62,14 +71,15 @@ const Hero = ({ scrollToSection }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1 }}
+          transition={{ duration: 0.8 }}
           className="hero-background"
         >
           <img 
-            src={getImageUrl(movie.backdrop_path)} 
-            alt={movie.title} 
+            src={getImageUrl(movie.backdrop_path, isMobile ? 'w780' : 'w1280')} 
+            alt={`Banner do filme ${movie.title}`} 
             className="hero-image"
             fetchPriority="high"
+            decoding="async"
           />
           <div className="hero-overlay-v"></div>
           <div className="hero-overlay-h"></div>
@@ -81,10 +91,10 @@ const Hero = ({ scrollToSection }) => {
           <motion.div 
             key={movie.id}
             className="hero-content"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.6 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
           >
             <div className="hero-badge">
               <span>STREAMING AO VIVO | FILMES | SÉRIES</span>
@@ -93,7 +103,9 @@ const Hero = ({ scrollToSection }) => {
             <h1 className="hero-title">{movie.title}</h1>
             
             <div className="hero-meta">
-              <span className="rating">{movie.vote_average.toFixed(1)} Classificação</span>
+              <span className="rating" aria-label={`Avaliação: ${movie.vote_average.toFixed(1)}`}>
+                {movie.vote_average.toFixed(1)} Classificação
+              </span>
               <span className="year">{new Date(movie.release_date).getFullYear()}</span>
               <span className="quality">4K Ultra HD</span>
             </div>
@@ -108,11 +120,15 @@ const Hero = ({ scrollToSection }) => {
               <button 
                 onClick={() => scrollToSection('mensalidade')} 
                 className="btn btn-primary"
+                aria-label="Começar a assistir agora"
               >
                 <Play size={20} fill="currentColor" />
                 <span>Assista Agora</span>
               </button>
-              <button className="btn btn-secondary">
+              <button 
+                className="btn btn-secondary"
+                aria-label="Ver detalhes do filme"
+              >
                 <Info size={20} />
                 <span>Saiba Mais</span>
               </button>
@@ -125,3 +141,4 @@ const Hero = ({ scrollToSection }) => {
 };
 
 export default Hero;
+
