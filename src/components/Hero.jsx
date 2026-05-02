@@ -37,7 +37,6 @@ const Hero = ({ scrollToSection }) => {
       preloadImage(getImageUrl(nextMovie.backdrop_path, window.innerWidth < 768 ? 'w780' : 'w1280'));
     }
   }, [movies]);
-...
 
   useEffect(() => {
     if (movies.length === 0) return;
