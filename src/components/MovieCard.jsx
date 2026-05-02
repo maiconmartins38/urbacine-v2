@@ -14,14 +14,17 @@ const MovieCard = React.memo(({ movie }) => {
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
       {!imageLoaded && <div className="movie-card-skeleton" />}
-      <img 
-        src={getPosterUrl(movie.poster_path)} 
-        alt={movie.title || movie.name} 
-        className={`movie-card-poster ${imageLoaded ? 'loaded' : 'loading'}`}
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setImageLoaded(true)}
-      />
+      <picture>
+        <source media="(max-width: 768px)" srcSet={getPosterUrl(movie.poster_path, 'w154')} />
+        <img 
+          src={getPosterUrl(movie.poster_path, 'w342')} 
+          alt={movie.title || movie.name} 
+          className={`movie-card-poster ${imageLoaded ? 'loaded' : 'loading'}`}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImageLoaded(true)}
+        />
+      </picture>
       <div className="movie-card-info">
         <div className="card-actions">
           <button className="play-btn-circle"><Play size={16} fill="black" /></button>

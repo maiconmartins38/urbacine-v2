@@ -8,14 +8,8 @@ const Hero = ({ scrollToSection }) => {
   const [movies, setMovies] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // We no longer need isMobile state because we use CSS <picture> tag!
 
   useEffect(() => {
     const fetchHeroData = async () => {
@@ -26,7 +20,7 @@ const Hero = ({ scrollToSection }) => {
         
         // Pré-carrega a primeira imagem com o tamanho ideal
         if (heroMovies[0]?.backdrop_path) {
-          const firstImageUrl = getImageUrl(heroMovies[0].backdrop_path, isMobile ? 'w780' : 'w1280');
+          const firstImageUrl = getImageUrl(heroMovies[0].backdrop_path, window.innerWidth < 768 ? 'w780' : 'w1280');
           preloadImage(firstImageUrl);
         }
       }
@@ -34,15 +28,15 @@ const Hero = ({ scrollToSection }) => {
     };
 
     fetchHeroData();
-  }, [isMobile]);
+  }, []);
 
   const preloadNext = useCallback((idx) => {
     const nextIdx = (idx + 1) % movies.length;
     const nextMovie = movies[nextIdx];
     if (nextMovie?.backdrop_path) {
-      preloadImage(getImageUrl(nextMovie.backdrop_path, isMobile ? 'w780' : 'w1280'));
+      preloadImage(getImageUrl(nextMovie.backdrop_path, window.innerWidth < 768 ? 'w780' : 'w1280'));
     }
-  }, [movies, isMobile]);
+  }, [movies]);
 ...
 
   useEffect(() => {
@@ -68,19 +62,22 @@ const Hero = ({ scrollToSection }) => {
       <AnimatePresence mode="wait">
         <motion.div 
           key={movie.id}
-          initial={{ opacity: 0 }}
+          initial={false}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8 }}
           className="hero-background"
         >
-          <img 
-            src={getImageUrl(movie.backdrop_path, isMobile ? 'w780' : 'w1280')} 
-            alt={`Banner do filme ${movie.title}`} 
-            className="hero-image"
-            fetchPriority="high"
-            decoding="async"
-          />
+          <picture>
+            <source media="(max-width: 768px)" srcSet={getImageUrl(movie.backdrop_path, 'w780')} />
+            <img 
+              src={getImageUrl(movie.backdrop_path, 'w1280')} 
+              alt={`Banner do filme ${movie.title}`} 
+              className="hero-image"
+              fetchPriority="high"
+              decoding="async"
+            />
+          </picture>
           <div className="hero-overlay-v"></div>
           <div className="hero-overlay-h"></div>
         </motion.div>

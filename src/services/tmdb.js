@@ -8,16 +8,12 @@ const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
 export const getImageUrl = (path, size = 'w1280') => {
   if (!path) return '';
-  // Se for mobile, força um tamanho menor para backdrop se não especificado
-  const finalSize = (size === 'w1280' && window.innerWidth < 768) ? 'w780' : size;
-  return `${IMAGE_BASE_URL}/${finalSize}${path}`;
+  return `${IMAGE_BASE_URL}/${size}${path}`;
 };
 
 export const getPosterUrl = (path, size = 'w342') => {
   if (!path) return '';
-  // Para mobile cards, w185 é suficiente e muito mais leve
-  const finalSize = (size === 'w342' && window.innerWidth < 768) ? 'w185' : size;
-  return `${IMAGE_BASE_URL}/${finalSize}${path}`;
+  return `${IMAGE_BASE_URL}/${size}${path}`;
 };
 
 // Cache de API em memória para evitar chamadas duplicadas

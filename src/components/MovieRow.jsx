@@ -18,7 +18,7 @@ const MovieRow = React.memo(({ title, fetchFn, autoPlay = true }) => {
           observer.disconnect();
         }
       },
-      { rootMargin: '200px' } // Começa a carregar 200px antes de aparecer
+      { rootMargin: '0px' } // Começa a carregar apenas quando entra na tela para priorizar o Hero
     );
 
     if (containerRef.current) {
