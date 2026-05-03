@@ -28,6 +28,7 @@
         try {
           const res = await fetch('https://api.themoviedb.org/3/movie/now_playing?api_key=%VITE_TMDB_API_KEY%&language=pt-BR');
           const data = await res.json();
+          window.__TMDB_NOW_PLAYING__ = data.results;
           if (data && data.results && data.results[0]) {
             const path = data.results[0].backdrop_path;
             const isMobile = window.innerWidth < 768;

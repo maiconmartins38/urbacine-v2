@@ -5,16 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './Hero.css';
 
 const Hero = ({ scrollToSection }) => {
-  const [movies, setMovies] = useState([]);
+  const [movies, setMovies] = useState(() => {
+    if (typeof window !== 'undefined' && window.__TMDB_NOW_PLAYING__) {
+      return window.__TMDB_NOW_PLAYING__.slice(0, 5);
+    }
+    return [];
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !(typeof window !== 'undefined' && window.__TMDB_NOW_PLAYING__));
 
   // We no longer need isMobile state because we use CSS <picture> tag!
 
   useEffect(() => {
+    if (movies.length > 0) return; // Se já carregou pelo window, não faz fetch de novo
+
+    let isMounted = true;
     const fetchHeroData = async () => {
       const data = await tmdbApi.getNowPlaying();
-      if (data.length > 0) {
+      if (data.length > 0 && isMounted) {
         const heroMovies = data.slice(0, 5); 
         setMovies(heroMovies);
         
@@ -24,11 +32,12 @@ const Hero = ({ scrollToSection }) => {
           preloadImage(firstImageUrl);
         }
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     fetchHeroData();
-  }, []);
+    return () => { isMounted = false; };
+  }, [movies.length]);
 
   const preloadNext = useCallback((idx) => {
     const nextIdx = (idx + 1) % movies.length;
