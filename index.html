@@ -31,7 +31,7 @@
           if (data && data.results && data.results[0]) {
             const path = data.results[0].backdrop_path;
             const isMobile = window.innerWidth < 768;
-            const size = isMobile ? 'w780' : 'w1280';
+            const size = isMobile ? 'w500' : 'w1280';
             const link = document.createElement('link');
             link.rel = 'preload';
             link.as = 'image';

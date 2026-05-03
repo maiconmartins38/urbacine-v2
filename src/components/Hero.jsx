@@ -20,7 +20,7 @@ const Hero = ({ scrollToSection }) => {
         
         // Pré-carrega a primeira imagem com o tamanho ideal
         if (heroMovies[0]?.backdrop_path) {
-          const firstImageUrl = getImageUrl(heroMovies[0].backdrop_path, window.innerWidth < 768 ? 'w780' : 'w1280');
+          const firstImageUrl = getImageUrl(heroMovies[0].backdrop_path, window.innerWidth < 768 ? 'w500' : 'w1280');
           preloadImage(firstImageUrl);
         }
       }
@@ -34,7 +34,7 @@ const Hero = ({ scrollToSection }) => {
     const nextIdx = (idx + 1) % movies.length;
     const nextMovie = movies[nextIdx];
     if (nextMovie?.backdrop_path) {
-      preloadImage(getImageUrl(nextMovie.backdrop_path, window.innerWidth < 768 ? 'w780' : 'w1280'));
+      preloadImage(getImageUrl(nextMovie.backdrop_path, window.innerWidth < 768 ? 'w500' : 'w1280'));
     }
   }, [movies]);
 
@@ -68,7 +68,7 @@ const Hero = ({ scrollToSection }) => {
           className="hero-background"
         >
           <picture>
-            <source media="(max-width: 768px)" srcSet={getImageUrl(movie.backdrop_path, 'w780')} />
+            <source media="(max-width: 768px)" srcSet={getImageUrl(movie.backdrop_path, 'w500')} />
             <img 
               src={getImageUrl(movie.backdrop_path, 'w1280')} 
               alt={`Banner do filme ${movie.title}`} 
