@@ -21,6 +21,7 @@ const MovieCard = React.memo(({ movie }) => {
           alt={movie.title || movie.name} 
           className={`movie-card-poster ${imageLoaded ? 'loaded' : 'loading'}`}
           loading="lazy"
+          fetchPriority="low"
           decoding="async"
           onLoad={() => setImageLoaded(true)}
         />
