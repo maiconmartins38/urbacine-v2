@@ -239,10 +239,22 @@
 
 .mobile-toggle {
   display: none;
+  background: transparent;
+  border: none;
+  padding: 8px;
   cursor: pointer;
   z-index: 1001;
   color: #fff;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, color 0.3s ease, background-color 0.3s ease;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  border-radius: 50%;
+}
+
+.mobile-toggle:hover {
+  color: var(--netflix-red);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .mobile-toggle:active {
@@ -254,7 +266,7 @@
     display: none;
   }
   .mobile-toggle {
-    display: block;
+    display: flex;
   }
 }
 
