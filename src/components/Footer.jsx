@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, Send, MessageCircle } from 'lucide-react';
+import { trackWhatsAppConversion } from '../utils/trackWhatsAppConversion';
 import './Footer.css';
 
 const Footer = ({ onOpenPrivacy, scrollToSection }) => {
@@ -19,7 +20,7 @@ const Footer = ({ onOpenPrivacy, scrollToSection }) => {
             A melhor solução de streaming do mercado, qualidade, estabilidade e o melhor preço de entrega e qualidade.
           </p>
           <div className="social-icons">
-            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="social-btn" aria-label="Contato via WhatsApp">
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="social-btn" aria-label="Contato via WhatsApp" onClick={trackWhatsAppConversion}>
               <MessageCircle size={20} />
             </a>
             <a href="#" className="social-btn" aria-label="Siga-nos no Instagram">
@@ -45,10 +46,10 @@ const Footer = ({ onOpenPrivacy, scrollToSection }) => {
         <div className="footer-column">
           <h3>Suporte</h3>
           <ul>
-            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer">Área do Cliente</a></li>
-            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer">Tutorial de Instalação</a></li>
-            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer">Teste Grátis</a></li>
-            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer">Contato</a></li>
+            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={trackWhatsAppConversion}>Área do Cliente</a></li>
+            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={trackWhatsAppConversion}>Tutorial de Instalação</a></li>
+            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={trackWhatsAppConversion}>Teste Grátis</a></li>
+            <li><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={trackWhatsAppConversion}>Contato</a></li>
           </ul>
         </div>
       </div>
