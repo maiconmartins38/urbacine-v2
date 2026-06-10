@@ -15,6 +15,17 @@
       gtag('js', new Date());
       gtag('config', 'AW-16527559041');
     </script>
+    <script>
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('a[href*="wa.me"]') || e.target.closest('a ')) {
+        gtag('event', 'conversion', {
+          'send_to': 'AW-16527559041/Bri6CMHhy7wcEIGT-sg9',
+          'value': 1.0,
+          'currency': 'BRL'
+        });
+      }
+    });
+    </script>
     <!-- Resource Hints para acelerar o carregamento -->
     <link rel="preconnect" href="https://api.themoviedb.org" crossorigin />
     <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
