@@ -1,6 +1,5 @@
 import React from 'react';
 import { Smartphone, Tv, Check, Zap, Play } from 'lucide-react';
-import { trackWhatsAppConversion } from '../utils/trackWhatsAppConversion';
 import './Pricing.css';
 
 const AndroidIcon = ({ size = 40 }) => (
@@ -41,7 +40,6 @@ const PricingCard = ({ title, icon: Icon, features, price, subtitle, isHighlight
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Assinar plano ${title} por R$ ${price} por mês`}
-        onClick={trackWhatsAppConversion}
       >
         <Play size={20} fill="currentColor" aria-hidden="true" />
         Testar agora mesmo

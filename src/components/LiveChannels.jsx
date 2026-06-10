@@ -1,5 +1,4 @@
 import React from 'react';
-import { trackWhatsAppConversion } from '../utils/trackWhatsAppConversion';
 import './LiveChannels.css';
 
 const LiveChannels = () => {
@@ -67,7 +66,6 @@ const LiveChannels = () => {
           className="btn-live-cta"
           target="_blank"
           rel="noopener noreferrer"
-          onClick={trackWhatsAppConversion}
         >
           Teste agora mesmo
         </a>

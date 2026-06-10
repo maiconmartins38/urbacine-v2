@@ -2,7 +2,6 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Hero from './components/Hero';
 import { tmdbApi } from './services/tmdb';
 import { Menu, Play, X } from 'lucide-react';
-import { trackWhatsAppConversion } from './utils/trackWhatsAppConversion';
 import './App.css';
 
 // Lazy loading components that are not visible on initial load
@@ -74,7 +73,6 @@ const Header = ({ scrollToSection }) => {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Pedir teste pelo WhatsApp"
-              onClick={trackWhatsAppConversion}
             >
               Teste agora mesmo.
             </a>
@@ -104,7 +102,6 @@ const Header = ({ scrollToSection }) => {
               className="btn-cta-mobile"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={trackWhatsAppConversion}
             >
               Teste agora mesmo
             </a>
