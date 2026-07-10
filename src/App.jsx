@@ -68,7 +68,7 @@ const Header = ({ scrollToSection }) => {
 
           <div className="header-right">
             <a 
-              href="https://wa.me/+554791391083?text=Ol%C3%A1%2C%20gostaria%20de%20um%20teste%20no%20aplicativo." 
+              href="https://wa.me/+554791981139?text=Ol%C3%A1%2C%20gostaria%20de%20um%20teste%20no%20aplicativo." 
               className="btn-cta"
               target="_blank"
               rel="noopener noreferrer"
@@ -98,7 +98,7 @@ const Header = ({ scrollToSection }) => {
           </ul>
           <div className="mobile-menu-footer">
             <a 
-              href="https://wa.me/+554791391083?text=Ol%C3%A1%2C%20gostaria%20de%20um%20teste%20no%20aplicativo." 
+              href="https://wa.me/+554791981139?text=Ol%C3%A1%2C%20gostaria%20de%20um%20teste%20no%20aplicativo." 
               className="btn-cta-mobile"
               target="_blank"
               rel="noopener noreferrer"

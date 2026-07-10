@@ -23,7 +23,7 @@ const PricingCard = ({ title, icon: Icon, features, price, subtitle, isHighlight
         <span className="price-value">{price}</span>
         <span className="price-period">/mês</span>
       </div>
-      <p className="price-info">Menos de R$ 1,17 por dia</p>
+      <p className="price-info">Menos de R$ 1 por dia</p>
 
       <ul className="pricing-features">
         {features.map((feature, index) => (
@@ -35,7 +35,7 @@ const PricingCard = ({ title, icon: Icon, features, price, subtitle, isHighlight
       </ul>
 
       <a 
-        href="https://wa.me/+554791391083?text=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20um%20teste%20gratuito%20agora%20mesmo." 
+        href="https://wa.me/+554791981139?text=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20um%20teste%20gratuito%20agora%20mesmo." 
         className="btn-pricing"
         target="_blank"
         rel="noopener noreferrer"
@@ -91,7 +91,7 @@ const Pricing = () => {
           <PricingCard 
             title="Sistemas Android"
             subtitle="Ideal para celulares, tablets e aparelhos Android portáteis de todas as marcas."
-            price="35"
+            price="30"
             features={androidFeatures}
             isHighlight={true}
             isAndroid={true}
@@ -100,7 +100,7 @@ const Pricing = () => {
             title="Sistemas Nativos"
             icon={Tv}
             subtitle="Perfeito para Smart TVs Samsung, LG e dispositivos Roku."
-            price="35"
+            price="30"
             features={nativeFeatures}
           />
         </div>

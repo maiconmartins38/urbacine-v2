@@ -3,7 +3,7 @@ import { Play, Send, MessageCircle } from 'lucide-react';
 import './Footer.css';
 
 const Footer = ({ onOpenPrivacy, scrollToSection }) => {
-  const whatsappUrl = "https://wa.me/+554791391083?text=Ol%C3%A1%2C%20gostaria%20de%20suporte.";
+  const whatsappUrl = "https://wa.me/+554791981139?text=Ol%C3%A1%2C%20gostaria%20de%20suporte.";
 
   return (
     <footer className="footer-v2">
