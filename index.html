@@ -27,6 +27,9 @@
           'value': 1.0,
           'currency': 'BRL'
         });
+        if (window.fbq) {
+          fbq('trackCustom', 'ClickWhatsApp');
+        }
       }
     });
     </script>
