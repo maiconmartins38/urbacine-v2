@@ -14,16 +14,28 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'AW-16527559041');
-      // Conversão - Visualização de página
+      gtag('config', 'AW-18311665039');
+      // Conversão - Visualização de página (conta antiga)
       gtag('event', 'conversion', {
         'send_to': 'AW-16527559041/XmAYCMbRvakZEIGT-sg9'
       });
-    </script>
+      // Conversão - Visualização de página (conta nova 1201349341)
+      gtag('event', 'conversion', {
+        'send_to': 'AW-18311665039/cBS0CN7l7s8cEI-r15tE'
+      });
+</script>
     <script>
     document.addEventListener('click', function(e) {
       if (e.target.closest('a[href*="wa.me"]')) {
+        // Conversão clique WhatsApp - conta antiga
         gtag('event', 'conversion', {
           'send_to': 'AW-16527559041/BrI6CMHhy7wcEIGT-sg9',
+          'value': 1.0,
+          'currency': 'BRL'
+        });
+        // Conversão clique WhatsApp - conta nova 1201349341
+        gtag('event', 'conversion', {
+          'send_to': 'AW-18311665039/eBxICPnR_tEcEI-r15tE',
           'value': 1.0,
           'currency': 'BRL'
         });
