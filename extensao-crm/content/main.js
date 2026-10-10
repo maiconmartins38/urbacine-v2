@@ -14,7 +14,7 @@
   function createBar() {
     barHost = document.createElement('div');
     barHost.id = 'crm-ext-bar';
-    barHost.style.cssText = 'position:fixed;z-index:10;display:none;';
+    barHost.style.cssText = 'position:fixed;z-index:999;display:none;';
     const shadow = barHost.attachShadow({ mode: 'open' });
     shadow.innerHTML = `<style>${CRM.styles}</style><div class="root"><div class="bar">${BUTTONS.map(
       (b) => `<button class="bar-btn" data-key="${b.key}">${icon(b.icon, 21)}<span class="bar-badge" hidden></span><span class="bar-tip">${b.tip}</span></button>`
@@ -28,20 +28,45 @@
     document.body.appendChild(barHost);
   }
 
+  // Acha a área da conversa aberta: { left, composerTop } ou null se nenhuma conversa estiver aberta.
+  function findConversation() {
+    const main = document.getElementById('main');
+    if (main) {
+      const rect = main.getBoundingClientRect();
+      const footer = main.querySelector('footer');
+      return { left: rect.left, composerTop: footer ? footer.getBoundingClientRect().top : rect.bottom };
+    }
+    // Plano B, caso o WhatsApp mude os nomes internos: parte do campo de digitar a mensagem
+    // (o campo editável mais embaixo da tela) e sobe até a coluna da conversa.
+    const boxes = [...document.querySelectorAll('[contenteditable="true"]')].filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    if (!boxes.length) return null;
+    const box = boxes.reduce((a, b) => (b.getBoundingClientRect().bottom > a.getBoundingClientRect().bottom ? b : a));
+    if (box.getBoundingClientRect().bottom < window.innerHeight * 0.6) return null; // é a busca, não o campo de mensagem
+    let child = box;
+    while (child.parentElement && child.parentElement !== document.body) {
+      const panel = child.parentElement.getBoundingClientRect();
+      if (panel.height > window.innerHeight * 0.6) {
+        return { left: panel.left, composerTop: child.getBoundingClientRect().top };
+      }
+      child = child.parentElement;
+    }
+    return null;
+  }
+
   // A barra fica no canto inferior esquerdo da conversa, logo acima do campo de digitar.
   function place() {
     if (!barHost || !barHost.isConnected) createBar();
-    const main = document.getElementById('main');
-    if (!main) {
+    const conv = findConversation();
+    if (!conv) {
       barHost.style.display = 'none';
       return;
     }
-    const rect = main.getBoundingClientRect();
-    const footer = main.querySelector('footer');
-    const bottomEdge = footer ? footer.getBoundingClientRect().top : rect.bottom;
     barHost.style.display = 'block';
-    barHost.style.left = Math.round(rect.left + 12) + 'px';
-    barHost.style.bottom = Math.round(window.innerHeight - bottomEdge + 14) + 'px';
+    barHost.style.left = Math.round(conv.left + 12) + 'px';
+    barHost.style.bottom = Math.round(window.innerHeight - conv.composerTop + 14) + 'px';
   }
 
   async function refreshBadges() {
@@ -77,6 +102,8 @@
 
   createBar();
   place();
+  CRM.ui.toast('CRM WhatsApp ativo ✓ (versão ' + chrome.runtime.getManifest().version + ')', 'ok');
+  CRM.wa.on('error', (error) => CRM.ui.toast('CRM WhatsApp: ' + error + ' Recarregue a página (F5).', 'err'));
   const placeTimer = setInterval(() => {
     if (!alive()) return shutdown();
     place();
