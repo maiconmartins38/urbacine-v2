@@ -35,6 +35,7 @@ CRM.store = (() => {
   return {
     get,
     set,
+    serialUpdate: update,
 
     getSchedules: () => get('schedules', []),
     updateSchedules: (fn) => update('schedules', [], fn),
@@ -63,6 +64,9 @@ CRM.store = (() => {
     putMedia: (id, media) => set('media:' + id, media),
     getMedia: (id) => (id ? get('media:' + id, null) : Promise.resolve(null)),
     deleteMedia: (id) => (id ? area.remove('media:' + id) : Promise.resolve()),
+
+    getRenewals: () => get('renewals', []),
+    updateRenewals: (fn) => update('renewals', [], fn),
 
     getReports: () => get('reports', []),
     addReport: (entry) =>

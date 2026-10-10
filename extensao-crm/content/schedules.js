@@ -29,7 +29,7 @@ CRM.schedules = (() => {
   };
 
   const TYPE_ICON = { text: 'text', media: 'image', audio: 'audio', quick: 'bolt' };
-  const STATUS_LABEL = { pending: 'Agendada', sending: 'Enviando…', sent: 'Enviada', error: 'Erro', late: 'Não enviada' };
+  const STATUS_LABEL = { pending: 'Agendada', sending: 'Enviando…', sent: 'Enviada', error: 'Erro', late: 'Não enviada', skipped: 'Pulada' };
 
   // ---------- Recorrência ----------
   function stepOf(s) {
@@ -113,7 +113,12 @@ CRM.schedules = (() => {
       return;
     }
     if (s.type === 'quick') {
-      throw new Error('Respostas rápidas ainda não existem nesta versão.');
+      const quick = await CRM.quick.get(s.quickReplyId);
+      if (!quick) throw new Error('A mensagem rápida escolhida não existe mais (foi excluída?).');
+      const quickText = fillVariables(quick.text, s).trim();
+      if (!quickText) throw new Error('A mensagem rápida está vazia.');
+      await CRM.wa.sendText(s.chatId, quickText);
+      return;
     }
     throw new Error('Tipo de mensagem desconhecido.');
   }
@@ -121,6 +126,7 @@ CRM.schedules = (() => {
   function preview(s) {
     if (s.type === 'media') return (s.text || '').trim() || '📎 ' + (s.mediaName || 'Arquivo');
     if (s.type === 'audio') return '🎤 Áudio' + (s.audioSeconds ? ' (' + formatDuration(s.audioSeconds) + ')' : '') + ((s.text || '').trim() ? ' + ' + s.text.trim() : '');
+    if (s.type === 'quick') return '⚡ ' + (s.quickTitle || 'Mensagem rápida');
     return (s.text || '').trim();
   }
 
@@ -254,7 +260,7 @@ CRM.schedules = (() => {
   // ---------- Contadores ----------
   async function pendingCount(chatId) {
     if (!chatId) return 0;
-    return (await store.getSchedules()).filter((s) => s.chatId === chatId && (s.status === 'pending' || s.status === 'sending')).length;
+    return (await store.getSchedules()).filter((s) => !s.renewalId && s.chatId === chatId && (s.status === 'pending' || s.status === 'sending')).length;
   }
 
   async function unseenReports() {
@@ -272,7 +278,7 @@ CRM.schedules = (() => {
         <div class="empty"><p>O WhatsApp Web ainda está carregando. Espere alguns segundos e tente de novo.</p></div>`);
       return;
     }
-    const all = (await store.getSchedules()).slice();
+    const all = (await store.getSchedules()).filter((s) => !s.renewalId);
     const list = (showAll || !chat ? all : all.filter((s) => s.chatId === chat.id)).sort((a, b) => {
       const order = (s) => (s.status === 'pending' || s.status === 'sending' ? 0 : 1);
       return order(a) - order(b) || (order(a) === 0 ? a.nextAt - b.nextAt : (b.lastRunAt || 0) - (a.lastRunAt || 0));
@@ -299,8 +305,8 @@ CRM.schedules = (() => {
         </div>`;
 
     const el = modal(head + body, { wide: true });
-    el.querySelector('[data-report]').addEventListener('click', openReport);
-    el.querySelector('[data-settings]').addEventListener('click', openSettings);
+    el.querySelector('[data-report]').addEventListener('click', () => openReport(openList));
+    el.querySelector('[data-settings]').addEventListener('click', () => openSettings(openList));
     el.querySelector('[data-all]').addEventListener('click', () => {
       showAll = !showAll;
       openList();
@@ -375,7 +381,9 @@ CRM.schedules = (() => {
       hasStoredMedia: !!s.mediaId,
       hasStoredAudio: !!s.audioId,
       recorder: null,
+      quickId: s.quickReplyId || '',
     };
+    let replies = await CRM.quick.list();
 
     const custom = s.recurrence === 'custom';
     // Ao editar um agendamento pendente, parte do próximo horário (o original pode já ter passado).
@@ -493,11 +501,17 @@ CRM.schedules = (() => {
         pane.querySelector('[data-audio-rec]').addEventListener('click', toggleRecording);
         renderAudioPreview();
       } else {
-        pane.innerHTML = `<div class="quick-card">
-            <div class="label">${icon('bolt', 14, 2)} Selecione uma resposta rápida</div>
-            <select class="select" disabled><option>Nenhuma resposta rápida cadastrada</option></select>
-            <div class="muted" style="font-size:12px;margin-top:6px">As respostas rápidas entram numa próxima etapa.</div>
-          </div>`;
+        pane.innerHTML = CRM.quick.selectHTML({ name: 'quick', label: 'Selecione uma resposta rápida', selectedId: state.quickId, replies });
+        const sel = pane.querySelector('select');
+        sel.addEventListener('change', () => (state.quickId = sel.value));
+        CRM.quick.bindPreview(pane, replies);
+        pane.querySelector('[data-new-quick]').addEventListener('click', () =>
+          CRM.quick.openQuickForm(async (item) => {
+            replies = await CRM.quick.list();
+            state.quickId = item.id;
+            renderPane();
+          })
+        );
       }
       bindTextarea();
     }
@@ -586,7 +600,7 @@ CRM.schedules = (() => {
       if (state.type === 'text' && !text.trim()) return fail('Escreva a mensagem.');
       if (state.type === 'media' && !state.media && !(editing && state.hasStoredMedia && s.type === 'media')) return fail('Importe o arquivo que será enviado.');
       if (state.type === 'audio' && !state.audio && !(editing && state.hasStoredAudio && s.type === 'audio')) return fail('Grave ou importe o áudio.');
-      if (state.type === 'quick') return fail('Ainda não há respostas rápidas cadastradas.');
+      if (state.type === 'quick' && !replies.some((q) => q.id === state.quickId)) return fail('Selecione uma mensagem rápida.');
       if (!date || !time) return fail('Escolha a data e a hora.');
       if (isCustom && !(customDays >= 1)) return fail('Informe de quantos em quantos dias (1 ou mais).');
       const at = toTimestamp(date, time);
@@ -612,6 +626,14 @@ CRM.schedules = (() => {
         createdAt: s.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
+
+      if (state.type === 'quick') {
+        item.quickReplyId = state.quickId;
+        item.quickTitle = (replies.find((q) => q.id === state.quickId) || {}).title || '';
+      } else {
+        delete item.quickReplyId;
+        delete item.quickTitle;
+      }
 
       if (state.type === 'media') {
         if (state.media) {
@@ -650,7 +672,7 @@ CRM.schedules = (() => {
   }
 
   // ---------- Tela: relatório ----------
-  async function openReport() {
+  async function openReport(back = openList) {
     await store.set('reportsSeenAt', Date.now());
     const reports = await store.getReports();
     const el = modal(
@@ -675,18 +697,18 @@ CRM.schedules = (() => {
       }`,
       { wide: true }
     );
-    el.querySelector('[data-back]').addEventListener('click', openList);
+    el.querySelector('[data-back]').addEventListener('click', back);
     const clear = el.querySelector('[data-clear]');
     if (clear)
       clear.addEventListener('click', async () => {
         if (!confirm('Apagar todo o relatório?')) return;
         await store.clearReports();
-        openReport();
+        openReport(back);
       });
   }
 
   // ---------- Tela: configurações ----------
-  async function openSettings() {
+  async function openSettings(back = openList) {
     const settings = await store.getSettings();
     const el = modal(`<div class="modal-head"><h2 class="modal-title">Configurações</h2></div>
       <div class="label" style="font-size:13.5px;color:#111b21">Se o WhatsApp Web estiver fechado no horário de uma mensagem agendada:</div>
@@ -695,14 +717,14 @@ CRM.schedules = (() => {
         <label><input type="radio" name="late" value="skip" ${settings.lateMode === 'skip' ? 'checked' : ''}> Não enviar (fica registrado no relatório)</label>
       </div>
       <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-save>Salvar</button></div>`);
-    el.querySelector('[data-cancel]').addEventListener('click', openList);
+    el.querySelector('[data-cancel]').addEventListener('click', back);
     el.querySelector('[data-save]').addEventListener('click', async () => {
       const value = el.querySelector('input[name="late"]:checked').value;
       await store.saveSettings({ ...settings, lateMode: value });
       toast('Configurações salvas.', 'ok');
-      openList();
+      back();
     });
   }
 
-  return { openList, tick, pendingCount, nextOccurrence };
+  return { openList, openReport, openSettings, tick, pendingCount, unseenReports, nextOccurrence, STATUS_LABEL };
 })();

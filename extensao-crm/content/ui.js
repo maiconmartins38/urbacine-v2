@@ -27,6 +27,8 @@ CRM.ui = (() => {
     check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     repeat: '<path d="M17 2.5l3 3-3 3"/><path d="M4 11.5v-1a5 5 0 0 1 5-5h11"/><path d="M7 21.5l-3-3 3-3"/><path d="M20 12.5v1a5 5 0 0 1-5 5H4"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/>',
+    renew: '<path d="M20 11.5A8 8 0 0 0 6 6.3"/><path d="M5.5 2.8v3.9h3.9"/><path d="M4 12.5a8 8 0 0 0 14 5.2"/><path d="M18.5 21.2v-3.9h-3.9"/><path d="M12 8.5v7M14 9.8c-.4-.8-1.2-1.3-2.2-1.3-1.2 0-2 .6-2 1.5 0 2 4.3 1 4.3 3.2 0 .9-.9 1.6-2.2 1.6-1 0-1.9-.5-2.3-1.3"/>',
+    renewed: '<circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l3 3 5.4-5.8"/>',
   };
 
   const icon = (name, size, stroke) => svg(ICONS[name], size, stroke);
@@ -60,7 +62,7 @@ CRM.ui = (() => {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (e.key === 'Escape' && layer && layer.firstChild && onEscape) {
+      if (e.key === 'Escape' && onEscape) {
         e.stopPropagation();
         e.preventDefault();
         onEscape();
@@ -87,7 +89,28 @@ CRM.ui = (() => {
 
   function closeModal() {
     if (layer) layer.innerHTML = '';
+    if (shadow) shadow.querySelectorAll('.sub-layer').forEach((el) => el.remove());
     onEscape = null;
+  }
+
+  // Janela por cima da janela atual (sem fechar a de baixo). Fecha com el.closeSub().
+  function subModal(html) {
+    ensureHost();
+    const wrap = document.createElement('div');
+    wrap.className = 'sub-layer';
+    const el = document.createElement('div');
+    el.className = 'modal';
+    el.innerHTML = `<button class="modal-close" data-close title="Fechar">${icon('close', 18, 2)}</button>${html}`;
+    wrap.appendChild(el);
+    layer.parentNode.appendChild(wrap);
+    const previousEscape = onEscape;
+    el.closeSub = () => {
+      wrap.remove();
+      onEscape = previousEscape;
+    };
+    el.querySelector('[data-close]').addEventListener('click', el.closeSub);
+    onEscape = el.closeSub;
+    return el;
   }
 
   function toast(text, kind = '') {
@@ -142,5 +165,5 @@ CRM.ui = (() => {
     return `<span class="info">${icon('info', 14, 2)}<span class="info-pop">${text}</span></span>`;
   }
 
-  return { icon, isolateEvents, modal, closeModal, toast, attachEmoji, textareaHTML, infoHTML };
+  return { icon, isolateEvents, modal, subModal, closeModal, toast, attachEmoji, textareaHTML, infoHTML };
 })();
