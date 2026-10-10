@@ -29,6 +29,13 @@ CRM.ui = (() => {
     user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/>',
     renew: '<path d="M20 11.5A8 8 0 0 0 6 6.3"/><path d="M5.5 2.8v3.9h3.9"/><path d="M4 12.5a8 8 0 0 0 14 5.2"/><path d="M18.5 21.2v-3.9h-3.9"/><path d="M12 8.5v7M14 9.8c-.4-.8-1.2-1.3-2.2-1.3-1.2 0-2 .6-2 1.5 0 2 4.3 1 4.3 3.2 0 .9-.9 1.6-2.2 1.6-1 0-1.9-.5-2.3-1.3"/>',
     client: '<circle cx="10" cy="8" r="4"/><path d="M3 20.5c1.1-3.6 3.7-5.5 7-5.5 1.4 0 2.7.3 3.8 1"/><path d="M18 14v7M14.5 17.5h7"/>',
+    folderPlus: '<path d="M20.5 12V8.5a2 2 0 0 0-2-2h-6.3L10 4H5.5a2 2 0 0 0-2 2v11.5a2 2 0 0 0 2 2H12"/><path d="M18 15.5v6M15 18.5h6"/>',
+    folderGo: '<path d="M20.5 18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4.5l2.2 2.5h6.3a2 2 0 0 1 2 2z"/><path d="M8.5 15.5c.4-2.5 2.4-4 5-4h2"/><path d="M13.5 9.5l2 2-2 2"/>',
+    menu: '<path d="M4 6.5h16M4 12h16M4 17.5h16"/>',
+    funnel: '<path d="M3.5 5h17l-6.5 7.8V19l-4 1.5v-7.7z"/>',
+    chevLeft: '<path d="M14.5 6l-6 6 6 6"/>',
+    chevRight: '<path d="M9.5 6l6 6-6 6"/>',
+    checkCircle: '<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M7.8 12.3l3 3 5.4-5.8" stroke="#fff" stroke-width="2.2"/>',
     renewed: '<circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l3 3 5.4-5.8"/>',
   };
 
@@ -114,6 +121,23 @@ CRM.ui = (() => {
     return el;
   }
 
+  // Aviso branco no canto superior direito (como o "Aba adicionada com sucesso").
+  function notice(text) {
+    ensureHost();
+    let box = shadow.querySelector('.notices');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'notices';
+      shadow.querySelector('.root').appendChild(box);
+    }
+    const n = document.createElement('div');
+    n.className = 'notice';
+    n.innerHTML = `${icon('checkCircle', 18)}<span></span>`;
+    n.querySelector('span').textContent = text;
+    box.appendChild(n);
+    setTimeout(() => n.remove(), 3500);
+  }
+
   function toast(text, kind = '') {
     ensureHost();
     const t = document.createElement('div');
@@ -166,5 +190,5 @@ CRM.ui = (() => {
     return `<span class="info">${icon('info', 14, 2)}<span class="info-pop">${text}</span></span>`;
   }
 
-  return { icon, isolateEvents, modal, subModal, closeModal, toast, attachEmoji, textareaHTML, infoHTML };
+  return { icon, isolateEvents, modal, subModal, closeModal, toast, notice, attachEmoji, textareaHTML, infoHTML };
 })();

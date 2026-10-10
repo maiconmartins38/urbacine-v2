@@ -83,5 +83,7 @@ CRM.wa = (() => {
     },
     sendText: (chatId, text) => call('sendText', { chatId, text }),
     sendFile: (chatId, dataUrl, options) => call('sendFile', { chatId, dataUrl, options }),
+    listChats: () => call('listChats', {}, 60000),
+    setChatList: (type, ids) => call('setChatList', { type, ids }, 20000),
   };
 })();

@@ -1,6 +1,6 @@
 // Cadastro do cliente: nome, telefone (puxado da conversa), descrição livre
 // (ex.: nomes dos servidores) e valor de lucro.
-// O campo "kanbanColumnId" já fica guardado para quando a aba Kanban existir.
+// O campo "Kanban" coloca o cliente numa das abas do topo (kanbanColumnId = id da aba).
 CRM.clients = (() => {
   const { esc, uid, formatDateTime } = CRM.util;
   const { icon, modal, toast } = CRM.ui;
@@ -105,11 +105,14 @@ CRM.clients = (() => {
   }
 
   // ---------- Tela: cadastrar / editar ----------
-  function openForm(existing) {
+  async function openForm(existing) {
     const chat = CRM.wa.state.activeChat;
     if (!existing && !chat) return toast('Abra a conversa do cliente primeiro.', 'err');
     const editing = !!existing;
     const c = existing || {};
+    const chatId = c.chatId || chat.id;
+    const tabs = await CRM.tabs.list();
+    const currentTab = await CRM.tabs.tabOf(chatId, c.kanbanColumnId);
     const phone = c.phone || (chat && chat.phone) || '';
     const name = c.name != null ? c.name : (chat && (chat.name || chat.pushname)) || '';
 
@@ -123,8 +126,12 @@ CRM.clients = (() => {
       <div class="row field">
         <div><div class="label">Valor (lucro)</div>
           <input class="input" name="value" inputmode="decimal" placeholder="R$ 0,00" value="${c.valueCents != null ? esc(formatMoney(c.valueCents)) : ''}"></div>
-        <div><div class="label">Kanban ${CRM.ui.infoHTML('A aba Kanban ainda não existe. Quando ela for criada, este cliente entra nela automaticamente.')}</div>
-          <select class="select" disabled><option>Será ligado à aba Kanban</option></select></div>
+        <div><div class="label">Kanban ${CRM.ui.infoHTML('A aba do topo da tela em que este cliente fica. Crie abas na pasta com "+" no canto superior direito.')}</div>
+          <select class="select" name="kanban" ${tabs.length ? '' : 'disabled'}>
+            ${tabs.length
+              ? '<option value="">Nenhuma</option>' + tabs.map((t) => `<option value="${t.id}" ${currentTab && currentTab.id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')
+              : '<option value="">Nenhuma aba criada ainda</option>'}
+          </select></div>
       </div>
       <div class="error-msg" data-error></div>
       <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-save>${editing ? 'Salvar' : 'Cadastrar'}</button></div>`);
@@ -149,16 +156,18 @@ CRM.clients = (() => {
       const client = {
         ...c,
         id: c.id || uid(),
-        chatId: c.chatId || chat.id,
+        chatId,
         name: nameValue,
         phone: phoneValue,
         description: field('description').value.trim(),
         valueCents: cents,
-        kanbanColumnId: c.kanbanColumnId || null,
+        kanbanColumnId: field('kanban').value || null,
         createdAt: c.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
       await store.updateClients((list) => list.filter((x) => x.id !== client.id).concat(client));
+      const previousTabId = currentTab ? currentTab.id : null;
+      if (previousTabId !== client.kanbanColumnId) await CRM.tabs.moveChat(chatId, previousTabId, client.kanbanColumnId);
       toast(editing ? 'Cadastro atualizado.' : 'Cliente cadastrado.', 'ok');
       openList();
     });

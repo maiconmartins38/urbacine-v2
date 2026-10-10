@@ -224,4 +224,69 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
 .radio-list { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 4px; }
 .radio-list label { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; cursor: pointer; }
 .radio-list input { accent-color: var(--teal); margin-top: 2px; }
+
+/* ---------- Barra de abas (topo) ---------- */
+.topbar {
+  height: 40px; display: flex; align-items: center; gap: 6px; padding: 0 10px 0 12px;
+  background: #eef0f4; border-bottom: 1px solid #e3e6ea;
+}
+.top-icon { border: 0; background: none; color: #3b4a54; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; position: relative; flex: none; }
+.top-icon:hover { background: #e2e6eb; }
+.top-icon.active { color: var(--teal); }
+.top-icon .dot { position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); }
+.tabs-scroll { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 4px 2px; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tab-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 5px 0 10px;
+  background: #fff; border: 1.5px solid #9fd6cf; border-radius: 10px; color: #111b21;
+  font-weight: 700; font-size: 12px; white-space: nowrap; cursor: pointer;
+}
+.tab-pill:hover { background: #dff2ee; }
+.tab-count {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 7px; background: var(--teal); color: #fff;
+  font-size: 10.5px; font-weight: 700; display: grid; place-items: center;
+}
+.tab-gear { display: none; color: #54656f; width: 18px; height: 18px; place-items: center; border-radius: 5px; }
+.tab-pill:hover .tab-count { display: none; }
+.tab-pill:hover .tab-gear { display: grid; }
+.tab-pill.on { background: linear-gradient(90deg, #24988d 0%, #2ba295 55%, #8ad2c7 100%); color: #fff; border-color: #1f3d3a; }
+.tab-pill.on .tab-gear { color: #fff; }
+.tab-pill.on .tab-count { background: #fff; color: var(--teal-dark); }
+.tabs-empty { color: var(--muted); font-size: 12.5px; align-self: center; white-space: nowrap; }
+
+.dropdown {
+  position: fixed; z-index: 2147483001; background: #fff; border-radius: 12px; min-width: 220px; max-width: 320px;
+  box-shadow: 0 8px 28px rgba(11, 20, 26, .22); padding: 10px 6px 8px;
+}
+.dropdown-title { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 700; padding: 0 10px 6px; color: var(--text); }
+.dropdown-title svg { color: var(--teal); flex: none; }
+.dropdown-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dropdown-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; background: none; padding: 6px 10px; border-radius: 7px; font-size: 14px; color: var(--text); }
+.dropdown-item:hover { background: #f0f2f5; }
+.dropdown-item.danger { color: var(--danger); }
+.dropdown-item .tab-count { margin-left: auto; }
+
+.popover {
+  position: fixed; z-index: 2147483001; top: 8px; right: 12px; background: #fff; border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(11, 20, 26, .2); padding: 8px 10px 8px 14px; display: flex; align-items: center; gap: 12px;
+}
+.popover svg.lead { color: var(--teal); flex: none; }
+.popover .input { width: 240px; border: 2px solid var(--teal); }
+.btn-flat { border: 0; background: var(--teal); color: #fff; font-weight: 700; font-size: 13.5px; border-radius: 6px; padding: 8px 14px; }
+.btn-flat:hover { background: var(--teal-dark); }
+
+.notices { position: fixed; top: 48px; right: 12px; z-index: 2147483003; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.notice { display: flex; align-items: center; gap: 10px; background: #fff; color: var(--text); padding: 12px 18px; border-radius: 10px; box-shadow: 0 6px 24px rgba(11, 20, 26, .16); font-size: 13.5px; min-width: 230px; }
+
+/* Escolher contatos */
+.picker-search { margin-bottom: 8px; }
+.picker-info { color: var(--muted); font-size: 12px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.picker-list { max-height: 46vh; overflow: auto; border: 1px solid #e9edef; border-radius: 10px; }
+.picker-row { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-bottom: 1px solid #f2f4f5; cursor: pointer; }
+.picker-row:last-child { border-bottom: 0; }
+.picker-row:hover { background: #f7f9fa; }
+.picker-row input { accent-color: var(--teal); width: 16px; height: 16px; flex: none; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; flex: none; }
+.picker-name { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-phone { font-size: 11.5px; color: var(--muted); }
 `;

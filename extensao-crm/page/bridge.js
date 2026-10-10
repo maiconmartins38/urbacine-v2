@@ -41,6 +41,17 @@
       confirmSent(await window.WPP.chat.sendTextMessage(chatId, text, { createChat: true })),
     sendFile: async ({ chatId, dataUrl, options }) =>
       confirmSent(await window.WPP.chat.sendFileMessage(chatId, dataUrl, { createChat: true, ...options })),
+    // Conversas para escolher contatos das abas (sem canais e listas de transmissão).
+    listChats: async () =>
+      (await window.WPP.chat.list())
+        .filter((c) => c && c.id && !['newsletter', 'broadcast'].includes(c.id.server))
+        .map(chatInfo)
+        .filter(Boolean),
+    // Filtra a lista de conversas do WhatsApp (abas). type: 'custom' com ids, ou 'all'.
+    setChatList: async ({ type, ids }) => {
+      const result = await window.WPP.chat.setChatList(type, ids);
+      return { type: result && result.type };
+    },
   };
 
   function isReady() {
