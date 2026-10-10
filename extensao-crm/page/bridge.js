@@ -47,12 +47,53 @@
         .filter((c) => c && c.id && !['newsletter', 'broadcast'].includes(c.id.server))
         .map(chatInfo)
         .filter(Boolean),
+    // Contato: nome salvo na agenda, nome do perfil e se já está salvo.
+    getContact: async ({ id }) => {
+      const c = await window.WPP.contact.get(id);
+      return { id, name: (c && c.name) || '', pushname: (c && c.pushname) || '', isMyContact: !!(c && c.isMyContact) };
+    },
+    // Salva/atualiza o contato no aparelho (sincroniza com a agenda do celular).
+    saveContact: async ({ id, name }) => {
+      await window.WPP.contact.save(id, name, { syncAddressBook: true });
+      return true;
+    },
+    removeContact: async ({ id }) => {
+      await window.WPP.contact.remove(id);
+      return true;
+    },
+    setAutoSave: ({ enabled }) => {
+      autoSave = !!enabled;
+      return autoSave;
+    },
     // Filtra a lista de conversas do WhatsApp (abas). type: 'custom' com ids, ou 'all'.
     setChatList: async ({ type, ids }) => {
       const result = await window.WPP.chat.setChatList(type, ids);
       return { type: result && result.type };
     },
   };
+
+  // "Salvar contatos automaticamente": quem mandar mensagem, não estiver na agenda
+  // e tiver nome no perfil do WhatsApp é salvo com esse nome.
+  let autoSave = false;
+  const autoSaved = new Set();
+  async function onNewMessage(msg) {
+    try {
+      if (!autoSave || !msg || !msg.isNewMsg || (msg.id && msg.id.fromMe)) return;
+      const from = msg.from;
+      if (!from || ['g.us', 'broadcast', 'newsletter'].includes(from.server)) return;
+      const id = from._serialized || String(from);
+      if (autoSaved.has(id)) return;
+      const contact = await window.WPP.contact.get(id);
+      if (contact && contact.isMyContact) return;
+      const name = String(msg.notifyName || (contact && contact.pushname) || '').trim();
+      if (!name) return;
+      autoSaved.add(id);
+      await window.WPP.contact.save(id, name, { syncAddressBook: true });
+      post({ event: 'contactAutoSaved', chat: { id, name } });
+    } catch (_) {
+      // não atrapalha o WhatsApp se não conseguir salvar
+    }
+  }
 
   function isReady() {
     return !!(window.WPP && window.WPP.isReady);
@@ -77,6 +118,7 @@
     try {
       post({ event: 'activeChat', chat: chatInfo(window.WPP.chat.getActiveChat()) });
       window.WPP.on('chat.active_chat', (chat) => post({ event: 'activeChat', chat: chatInfo(chat) }));
+      window.WPP.on('chat.new_message', onNewMessage);
     } catch (err) {
       post({ event: 'error', error: (err && err.message) || String(err) });
     }

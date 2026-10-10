@@ -101,8 +101,10 @@
     clearInterval(placeTimer);
     clearInterval(tickTimer);
     if (barHost) barHost.remove();
-    const host = document.getElementById('crm-ext-host');
-    if (host) host.remove();
+    ['crm-ext-host', 'crm-ext-tabs', 'crm-ext-name', 'crm-ext-push'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
   }
 
   createBar();
@@ -113,11 +115,13 @@
   const placeTimer = setInterval(() => {
     if (!alive()) return shutdown();
     place();
+    CRM.contactName.place();
   }, 700);
   window.addEventListener('resize', place);
 
   CRM.wa.on('activeChat', () => {
     place();
+    CRM.contactName.place();
     refreshBadges();
   });
   CRM.wa.on('ready', () => {

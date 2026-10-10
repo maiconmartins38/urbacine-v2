@@ -6,7 +6,8 @@ CRM.tabs = (() => {
   const { icon, modal, toast, notice } = CRM.ui;
   const store = CRM.store;
 
-  const BAR_HEIGHT = 40;
+  const BAR_HEIGHT = 36;
+  const SHIFT_ATTR = 'data-crm-shift';
   let host = null;
   let shadow = null;
   let selectedId = null;
@@ -31,14 +32,41 @@ CRM.tabs = (() => {
   }
 
   // ---------- Barra ----------
+  // Abre espaço para a barra: desce a tela do WhatsApp em vez de ficar por cima dela.
+  // 1) #app vira "relative" com margem; 2) se a camada principal do WhatsApp for "fixed"
+  //    (ou "absolute" presa à janela) e continuar colada no topo, ela também é descida.
   function pushWhatsAppDown() {
-    if (document.getElementById('crm-ext-push')) return;
-    const style = document.createElement('style');
-    style.id = 'crm-ext-push';
-    style.textContent = document.getElementById('app')
-      ? `#app { margin-top: ${BAR_HEIGHT}px !important; height: calc(100% - ${BAR_HEIGHT}px) !important; }`
-      : `body { padding-top: ${BAR_HEIGHT}px !important; box-sizing: border-box !important; }`;
-    document.head.appendChild(style);
+    if (!document.getElementById('crm-ext-push')) {
+      const style = document.createElement('style');
+      style.id = 'crm-ext-push';
+      style.textContent = `
+        #app { position: relative !important; margin-top: ${BAR_HEIGHT}px !important; height: calc(100% - ${BAR_HEIGHT}px) !important; }
+        [${SHIFT_ATTR}] { top: ${BAR_HEIGHT}px !important; height: calc(100% - ${BAR_HEIGHT}px) !important; max-height: calc(100% - ${BAR_HEIGHT}px) !important; }`;
+      (document.head || document.documentElement).appendChild(style);
+    }
+    fixLayers();
+  }
+
+  // Sobe a partir de pontos conhecidos da tela (lista de conversas, conversa aberta, busca)
+  // e desce a camada mais externa que ainda estiver embaixo da barra.
+  function fixLayers() {
+    const anchors = [
+      document.getElementById('side'),
+      document.getElementById('pane-side'),
+      document.getElementById('main'),
+      document.querySelector('#app [contenteditable="true"]'),
+    ].filter(Boolean);
+    for (const anchor of anchors) {
+      const chain = [];
+      for (let el = anchor; el && el !== document.body && el !== document.documentElement; el = el.parentElement) chain.unshift(el);
+      for (const el of chain) {
+        if (el.hasAttribute(SHIFT_ATTR)) continue;
+        const pos = getComputedStyle(el).position;
+        if (pos !== 'fixed' && pos !== 'absolute') continue;
+        const r = el.getBoundingClientRect();
+        if (r.top < BAR_HEIGHT - 1 && r.height > window.innerHeight * 0.5) el.setAttribute(SHIFT_ATTR, '');
+      }
+    }
   }
 
   function mount() {
@@ -59,6 +87,8 @@ CRM.tabs = (() => {
     CRM.ui.isolateEvents(host);
     document.body.appendChild(host);
     pushWhatsAppDown();
+    setInterval(fixLayers, 1000); // o WhatsApp monta a tela aos poucos
+    window.addEventListener('resize', fixLayers);
 
     const scroll = shadow.querySelector('[data-scroll]');
     shadow.querySelector('[data-left]').addEventListener('click', () => scroll.scrollBy({ left: -300, behavior: 'smooth' }));

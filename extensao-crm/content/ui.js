@@ -36,6 +36,7 @@ CRM.ui = (() => {
     chevLeft: '<path d="M14.5 6l-6 6 6 6"/>',
     chevRight: '<path d="M9.5 6l6 6-6 6"/>',
     checkCircle: '<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M7.8 12.3l3 3 5.4-5.8" stroke="#fff" stroke-width="2.2"/>',
+    userEdit: '<circle cx="9.5" cy="8" r="3.8"/><path d="M3 20c.9-3.4 3.3-5.2 6.5-5.2 1 0 1.9.2 2.7.5"/><path d="M14.5 20.5l.5-2.2 4.3-4.3a1.3 1.3 0 0 1 1.8 1.8l-4.3 4.3z"/>',
     renewed: '<circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l3 3 5.4-5.8"/>',
   };
 

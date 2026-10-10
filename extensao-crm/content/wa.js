@@ -70,7 +70,7 @@ CRM.wa = (() => {
   return {
     state,
     on(event, fn) {
-      listeners[event].push(fn);
+      (listeners[event] = listeners[event] || []).push(fn);
     },
     async refreshActiveChat() {
       if (!state.ready) return state.activeChat;
@@ -85,5 +85,9 @@ CRM.wa = (() => {
     sendFile: (chatId, dataUrl, options) => call('sendFile', { chatId, dataUrl, options }),
     listChats: () => call('listChats', {}, 60000),
     setChatList: (type, ids) => call('setChatList', { type, ids }, 20000),
+    getContact: (id) => call('getContact', { id }, 20000),
+    saveContact: (id, name) => call('saveContact', { id, name }, 30000),
+    removeContact: (id) => call('removeContact', { id }, 30000),
+    setAutoSave: (enabled) => call('setAutoSave', { enabled }, 10000),
   };
 })();

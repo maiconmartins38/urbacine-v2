@@ -227,7 +227,7 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
 
 /* ---------- Barra de abas (topo) ---------- */
 .topbar {
-  height: 40px; display: flex; align-items: center; gap: 6px; padding: 0 10px 0 12px;
+  height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 10px 0 12px;
   background: #eef0f4; border-bottom: 1px solid #e3e6ea;
 }
 .top-icon { border: 0; background: none; color: #3b4a54; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; position: relative; flex: none; }
@@ -237,7 +237,7 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
 .tabs-scroll { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 4px 2px; }
 .tabs-scroll::-webkit-scrollbar { display: none; }
 .tab-pill {
-  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 5px 0 10px;
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 4px 0 9px;
   background: #fff; border: 1.5px solid #9fd6cf; border-radius: 10px; color: #111b21;
   font-weight: 700; font-size: 12px; white-space: nowrap; cursor: pointer;
 }
@@ -275,7 +275,7 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
 .btn-flat { border: 0; background: var(--teal); color: #fff; font-weight: 700; font-size: 13.5px; border-radius: 6px; padding: 8px 14px; }
 .btn-flat:hover { background: var(--teal-dark); }
 
-.notices { position: fixed; top: 48px; right: 12px; z-index: 2147483003; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.notices { position: fixed; top: 44px; right: 12px; z-index: 2147483003; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 .notice { display: flex; align-items: center; gap: 10px; background: #fff; color: var(--text); padding: 12px 18px; border-radius: 10px; box-shadow: 0 6px 24px rgba(11, 20, 26, .16); font-size: 13.5px; min-width: 230px; }
 
 /* Escolher contatos */
@@ -289,4 +289,11 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
 .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; flex: none; }
 .picker-name { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .picker-phone { font-size: 11.5px; color: var(--muted); }
+
+/* Chave liga/desliga (Salvar contatos automaticamente) */
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 2px; }
+.switch { position: relative; width: 38px; height: 22px; border-radius: 11px; border: 0; background: #c5cdd2; flex: none; transition: background .15s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s; }
+.switch.on { background: #25d366; }
+.switch.on::after { left: 19px; }
 `;
