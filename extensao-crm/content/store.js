@@ -65,6 +65,9 @@ CRM.store = (() => {
     getMedia: (id) => (id ? get('media:' + id, null) : Promise.resolve(null)),
     deleteMedia: (id) => (id ? area.remove('media:' + id) : Promise.resolve()),
 
+    getClients: () => get('clients', []),
+    updateClients: (fn) => update('clients', [], fn),
+
     getRenewals: () => get('renewals', []),
     updateRenewals: (fn) => update('renewals', [], fn),
 

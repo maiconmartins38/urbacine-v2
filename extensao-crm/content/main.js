@@ -4,6 +4,7 @@
   const { icon } = CRM.ui;
 
   const BUTTONS = [
+    { key: 'clients', icon: 'client', tip: 'Cadastro', open: () => CRM.clients.openList() },
     { key: 'renewed', icon: 'renewed', tip: 'Renovado', open: () => CRM.renewals.markRenewed() },
     { key: 'renewals', icon: 'renew', tip: 'Mensagens de Renovação', open: () => CRM.renewals.openList() },
     { key: 'schedules', icon: 'schedule', tip: 'Mensagens Agendadas', open: () => CRM.schedules.openList() },
@@ -75,6 +76,7 @@
     if (!bar) return;
     const chat = CRM.wa.state.activeChat;
     const counts = {
+      clients: chat ? await CRM.clients.countFor(chat.id) : 0,
       renewals: chat ? await CRM.renewals.activeCount(chat.id) : 0,
       schedules: chat ? await CRM.schedules.pendingCount(chat.id) : 0,
       notes: chat ? await CRM.notes.countFor(chat.id) : 0,
@@ -122,7 +124,7 @@
     CRM.schedules.tick();
   });
   CRM.store.onChange((changes) => {
-    if (changes.schedules || changes.notes || changes.renewals) refreshBadges();
+    if (changes.schedules || changes.notes || changes.renewals || changes.clients) refreshBadges();
   });
 
   const tickTimer = setInterval(() => {
