@@ -6,8 +6,7 @@ CRM.tabs = (() => {
   const { icon, modal, toast, notice } = CRM.ui;
   const store = CRM.store;
 
-  const BAR_HEIGHT = 36;
-  const SHIFT_ATTR = 'data-crm-shift';
+  const BAR_HEIGHT = CRM.layout.HEIGHT;
   let host = null;
   let shadow = null;
   let selectedId = null;
@@ -32,43 +31,6 @@ CRM.tabs = (() => {
   }
 
   // ---------- Barra ----------
-  // Abre espaço para a barra: desce a tela do WhatsApp em vez de ficar por cima dela.
-  // 1) #app vira "relative" com margem; 2) se a camada principal do WhatsApp for "fixed"
-  //    (ou "absolute" presa à janela) e continuar colada no topo, ela também é descida.
-  function pushWhatsAppDown() {
-    if (!document.getElementById('crm-ext-push')) {
-      const style = document.createElement('style');
-      style.id = 'crm-ext-push';
-      style.textContent = `
-        #app { position: relative !important; margin-top: ${BAR_HEIGHT}px !important; height: calc(100% - ${BAR_HEIGHT}px) !important; }
-        [${SHIFT_ATTR}] { top: ${BAR_HEIGHT}px !important; height: calc(100% - ${BAR_HEIGHT}px) !important; max-height: calc(100% - ${BAR_HEIGHT}px) !important; }`;
-      (document.head || document.documentElement).appendChild(style);
-    }
-    fixLayers();
-  }
-
-  // Sobe a partir de pontos conhecidos da tela (lista de conversas, conversa aberta, busca)
-  // e desce a camada mais externa que ainda estiver embaixo da barra.
-  function fixLayers() {
-    const anchors = [
-      document.getElementById('side'),
-      document.getElementById('pane-side'),
-      document.getElementById('main'),
-      document.querySelector('#app [contenteditable="true"]'),
-    ].filter(Boolean);
-    for (const anchor of anchors) {
-      const chain = [];
-      for (let el = anchor; el && el !== document.body && el !== document.documentElement; el = el.parentElement) chain.unshift(el);
-      for (const el of chain) {
-        if (el.hasAttribute(SHIFT_ATTR)) continue;
-        const pos = getComputedStyle(el).position;
-        if (pos !== 'fixed' && pos !== 'absolute') continue;
-        const r = el.getBoundingClientRect();
-        if (r.top < BAR_HEIGHT - 1 && r.height > window.innerHeight * 0.5) el.setAttribute(SHIFT_ATTR, '');
-      }
-    }
-  }
-
   function mount() {
     if (host && host.isConnected) return;
     host = document.createElement('div');
@@ -86,9 +48,9 @@ CRM.tabs = (() => {
       </div></div>`;
     CRM.ui.isolateEvents(host);
     document.body.appendChild(host);
-    pushWhatsAppDown();
-    setInterval(fixLayers, 1000); // o WhatsApp monta a tela aos poucos
-    window.addEventListener('resize', fixLayers);
+    CRM.layout.start({
+      onAutoFail: () => toast('Não consegui encaixar a barra no topo sem atrapalhar a tela, então ela ficou por cima. Use o menu ☰ → "Ajustar posição da barra".', 'err'),
+    });
 
     const scroll = shadow.querySelector('[data-scroll]');
     shadow.querySelector('[data-left]').addEventListener('click', () => scroll.scrollBy({ left: -300, behavior: 'smooth' }));
@@ -239,7 +201,8 @@ CRM.tabs = (() => {
     const tabs = await getTabs();
     const el = showDropdown(`<div class="dropdown-title">${icon('menu', 20)}<span>Abas</span></div>
       ${tabs.map((t) => `<button class="dropdown-item" data-go="${t.id}"><span>${esc(t.name)}</span><span class="tab-count">${(t.chatIds || []).length}</span></button>`).join('')}
-      <button class="dropdown-item" data-new>+ Criar uma nova aba</button>`, anchor, true);
+      <button class="dropdown-item" data-new>+ Criar uma nova aba</button>
+      <button class="dropdown-item" data-layout>⚙ Ajustar posição da barra</button>`, anchor, true);
     el.addEventListener('click', (e) => {
       const go = e.target.closest('[data-go]');
       if (go) {
@@ -249,6 +212,9 @@ CRM.tabs = (() => {
         });
       } else if (e.target.closest('[data-new]')) {
         openNamePopover();
+      } else if (e.target.closest('[data-layout]')) {
+        closeDropdown();
+        openLayoutModal();
       }
     });
   }
@@ -381,6 +347,41 @@ CRM.tabs = (() => {
     await updateTabs((all) => all.filter((t) => t.id !== tab.id));
     notice('Aba removida');
     if (selectedId === tab.id) select(null);
+  }
+
+  // ---------- Ajustar posição da barra + diagnóstico ----------
+  function openLayoutModal() {
+    const modes = [['auto', 'Automático (recomendado) — testa os modos e fica com o que encaixar certo'], ...Object.entries(CRM.layout.MODES)];
+    const el = modal(`<div class="modal-head"><h2 class="modal-title">Posição da barra</h2></div>
+      <div class="label" style="font-size:13.5px;color:#111b21">Escolha um modo. A tela muda na hora — fique com o que deixar o WhatsApp inteiro, logo abaixo da barra.</div>
+      <div class="radio-list">${modes.map(([v, l]) => `<label><input type="radio" name="lm" value="${v}" ${CRM.layout.mode === v ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div>
+      <div class="muted" style="font-size:12px" data-applied></div>
+      <div class="field" style="margin-top:12px"><div class="label">Diagnóstico (só tamanhos e posições da tela, nenhuma mensagem)</div>
+        <textarea class="textarea" readonly style="min-height:110px;font-family:monospace;font-size:11px" data-diag></textarea></div>
+      <div class="actions"><button class="btn" data-copy>Copiar diagnóstico</button><button class="btn" data-close-modal>Fechar</button></div>`, { wide: true });
+    const diag = el.querySelector('[data-diag]');
+    const refresh = () => {
+      diag.value = CRM.layout.diagnose();
+      el.querySelector('[data-applied]').textContent = 'Em uso agora: ' + (CRM.layout.MODES[CRM.layout.applied] || 'nenhum (aguardando a tela do WhatsApp)');
+    };
+    el.querySelectorAll('input[name="lm"]').forEach((r) =>
+      r.addEventListener('change', async () => {
+        await CRM.layout.setMode(r.value);
+        setTimeout(refresh, 1500);
+      })
+    );
+    el.querySelector('[data-copy]').addEventListener('click', async () => {
+      refresh();
+      try {
+        await navigator.clipboard.writeText(diag.value);
+        notice('Diagnóstico copiado — cole na conversa com o Claude');
+      } catch (_) {
+        diag.select();
+        toast('Não consegui copiar sozinho: o texto ficou selecionado, aperte Ctrl+C.', 'err');
+      }
+    });
+    el.querySelector('[data-close-modal]').addEventListener('click', CRM.ui.closeModal);
+    refresh();
   }
 
   // ---------- Para outras telas (Cadastro) ----------
