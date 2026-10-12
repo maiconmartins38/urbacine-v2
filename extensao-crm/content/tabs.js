@@ -49,7 +49,7 @@ CRM.tabs = (() => {
     CRM.ui.isolateEvents(host);
     document.body.appendChild(host);
     CRM.layout.start({
-      onAutoFail: () => toast('Não consegui encaixar a barra no topo sem atrapalhar a tela, então ela ficou por cima. Use o menu ☰ → "Ajustar posição da barra".', 'err'),
+      onAutoFail: () => toast('Não consegui encaixar as barras sem atrapalhar a tela, então elas ficaram por cima. Use o menu ☰ → "Ajustar posição da barra".', 'err'),
     });
 
     const scroll = shadow.querySelector('[data-scroll]');
@@ -353,7 +353,7 @@ CRM.tabs = (() => {
   function openLayoutModal() {
     const modes = [['auto', 'Automático (recomendado) — testa os modos e fica com o que encaixar certo'], ...Object.entries(CRM.layout.MODES)];
     const el = modal(`<div class="modal-head"><h2 class="modal-title">Posição da barra</h2></div>
-      <div class="label" style="font-size:13.5px;color:#111b21">Escolha um modo. A tela muda na hora — fique com o que deixar o WhatsApp inteiro, logo abaixo da barra.</div>
+      <div class="label" style="font-size:13.5px;color:#111b21">Escolha um modo. A tela muda na hora — fique com o que deixar o WhatsApp inteiro, abaixo da barra de abas e ao lado do menu lateral.</div>
       <div class="radio-list">${modes.map(([v, l]) => `<label><input type="radio" name="lm" value="${v}" ${CRM.layout.mode === v ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div>
       <div class="muted" style="font-size:12px" data-applied></div>
       <div class="field" style="margin-top:12px"><div class="label">Diagnóstico (só tamanhos e posições da tela, nenhuma mensagem)</div>

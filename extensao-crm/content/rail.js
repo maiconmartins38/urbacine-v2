@@ -1,0 +1,101 @@
+// Menu lateral esquerdo (como no vídeo). Por enquanto só os botões e os nomes ao
+// passar o mouse; cada função será ligada numa próxima etapa.
+CRM.rail = (() => {
+  const W = CRM.layout.LEFT;
+  const TOP = CRM.layout.HEIGHT;
+
+  const svg = (inner, color) =>
+    `<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="${color || 'currentColor'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+
+  const ICONS = {
+    kanban: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8.5 8v8M12 8v4M15.5 8v6"/>',
+    massSend: '<path d="M20.5 3.5L3.5 10.8l6.8 2.4 2.4 6.8z"/><path d="M20.5 3.5l-10.2 9.7"/>',
+    calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M7.5 13h1M11.5 13h1M15.5 13h1M7.5 16.5h1M11.5 16.5h1" stroke-width="2.2"/>',
+    flow: '<circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4.5M12 11.5L6.8 17.3M12 11.5l5.2 5.8"/>',
+    funnel: '<path d="M3.5 5h17l-6.5 7.8V19l-4 1.5v-7.7z"/>',
+    robot: '<rect x="5" y="8.5" width="14" height="10.5" rx="3"/><path d="M12 8.5V5.5"/><circle cx="12" cy="4.5" r="1"/><path d="M9.5 13.2h.01M14.5 13.2h.01" stroke-width="2.8"/><path d="M3 12.5v3M21 12.5v3"/>',
+    followUp: '<path d="M4 5h16v11.5H9.5L5 20v-3.5H4z"/><path d="M12 8v5.5M9.2 10.8h5.6"/>',
+    status: '<circle cx="12" cy="12" r="9"/><path d="M15.8 10.2a4 4 0 1 0 .2 2.8"/><path d="M16 7.8v2.6h-2.6"/>',
+    api: '<circle cx="12" cy="6.5" r="2"/><circle cx="5.5" cy="17.5" r="2"/><circle cx="18.5" cy="17.5" r="2"/><path d="M12 8.5v4M7.2 16.4L12 12.5l4.8 3.9"/>',
+    webhook: '<path d="M9.5 8.2a3 3 0 1 1 4.6 2.5l2.7 4.8"/><path d="M7.6 18.5a3 3 0 1 1 1.2-5.5l2.8 4.6h5.5"/><path d="M16.5 15.5a3 3 0 1 1-1.8 4.5"/>',
+    links: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/>',
+    startChat: '<path d="M4.5 13.5a7 6 0 1 1 3 4.4L4 19l1-3.2"/><path d="M13.5 13h7v5h-2l-2.5 2v-2h-2.5z" fill="currentColor"/>',
+    referral: '<path d="M12 3v18M16.3 7.3C15.7 6 14.2 5.2 12.2 5.2c-2.4 0-4.2 1.2-4.2 3.1 0 4.6 8.4 2.6 8.4 7.3 0 1.9-1.9 3.2-4.3 3.2-2.2 0-3.8-.9-4.4-2.4"/>',
+    google: '<path d="M17 7.4A7 7 0 0 0 5.6 8.9" stroke="#EA4335" stroke-width="3" stroke-linecap="butt"/><path d="M5.6 8.9a7 7 0 0 0 0 6.2" stroke="#FBBC05" stroke-width="3" stroke-linecap="butt"/><path d="M5.6 15.1a7 7 0 0 0 12 1.6" stroke="#34A853" stroke-width="3" stroke-linecap="butt"/><path d="M17.6 16.7A7 7 0 0 0 19 12h-6.5" stroke="#4285F4" stroke-width="3" stroke-linecap="butt"/>',
+    youtube: '<rect x="2.5" y="6" width="19" height="12.5" rx="3.6" fill="#ff0000" stroke="none"/><path d="M10 9.6v5.2l4.6-2.6z" fill="#fff" stroke="none"/>',
+    panel: '<rect x="4" y="4" width="7" height="16" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    sliders: '<path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/>',
+    bell: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  };
+
+  // Mesma ordem e nomes do vídeo. Os de baixo não tiveram o nome mostrado no vídeo (nomes provisórios).
+  const TOP_ITEMS = [
+    { key: 'kanban', icon: 'kanban', tip: 'Kanban' },
+    { key: 'massSend', icon: 'massSend', tip: 'Envio Em Massa', color: '#e9a23b' },
+    { key: 'schedules', icon: 'calendar', tip: 'Central De Agendamentos' },
+    { key: 'flow', icon: 'flow', tip: 'Fluxo' },
+    { key: 'funnel', icon: 'funnel', tip: 'Funil CRM' },
+    { key: 'autoReply', icon: 'robot', tip: 'Auto Atendimento' },
+    { key: 'followUp', icon: 'followUp', tip: 'Follow Up' },
+    { key: 'status', icon: 'status', tip: 'Status' },
+    { key: 'api', icon: 'api', tip: 'API' },
+    { key: 'webhook', icon: 'webhook', tip: 'WebHook' },
+    { key: 'links', icon: 'links', tip: 'Links' },
+    { key: 'startChat', icon: 'startChat', tip: 'Iniciar uma conversa' },
+    { key: 'referral', icon: 'referral', tip: 'Indique e Ganhe' },
+    { key: 'google', icon: 'google', tip: 'Atalhos Google' },
+  ];
+  const BOTTOM_ITEMS = [
+    { key: 'tutorials', icon: 'youtube', tip: 'Tutoriais' },
+    { key: 'panel', icon: 'panel', tip: 'Painel' },
+    { key: 'preferences', icon: 'sliders', tip: 'Preferências' },
+    { key: 'notifications', icon: 'bell', tip: 'Notificações' },
+    { key: 'settings', icon: 'gear', tip: 'Configurações' },
+  ];
+
+  const CSS = `
+    .rail { position: absolute; inset: 0; background: #eef0f4; border-right: 1px solid #e3e6ea;
+      display: flex; flex-direction: column; align-items: center; padding: 8px 0 6px; }
+    .rail-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .rail-spacer { flex: 1; min-height: 8px; }
+    .rail-btn { position: relative; width: 30px; height: 30px; border-radius: 50%; border: 0; background: none; color: #54656f;
+      display: grid; place-items: center; cursor: pointer; flex: none; }
+    .rail-btn:hover { background: #dde1e6; }
+    .rail-tip { position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); background: var(--teal); color: #fff;
+      font-weight: 700; font-size: 12px; white-space: nowrap; padding: 6px 11px; border-radius: 7px; pointer-events: none;
+      opacity: 0; transition: opacity .1s; box-shadow: 0 2px 6px rgba(0, 0, 0, .15); z-index: 2; }
+    .rail-tip::before { content: ""; position: absolute; left: -6px; top: 50%; transform: translateY(-50%);
+      border: 6px solid transparent; border-left: 0; border-right-color: var(--teal); }
+    .rail-btn:hover .rail-tip { opacity: 1; }
+    .rail-version { font-size: 9.5px; color: #8696a0; margin-top: 4px; }
+  `;
+
+  function buttonHTML(item) {
+    return `<button class="rail-btn" data-rail="${item.key}">${svg(ICONS[item.icon], item.color)}<span class="rail-tip">${item.tip}</span></button>`;
+  }
+
+  function mount() {
+    if (document.getElementById('crm-ext-rail')) return;
+    const host = document.createElement('div');
+    host.id = 'crm-ext-rail';
+    host.style.cssText = `position:fixed;top:${TOP}px;left:0;bottom:0;width:${W}px;z-index:989;`;
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = `<style>${CRM.styles}${CSS}</style><div class="root"><nav class="rail">
+      <div class="rail-group">${TOP_ITEMS.map(buttonHTML).join('')}</div>
+      <div class="rail-spacer"></div>
+      <div class="rail-group">${BOTTOM_ITEMS.map(buttonHTML).join('')}</div>
+      <div class="rail-version">${chrome.runtime.getManifest().version}</div>
+    </nav></div>`;
+    shadow.querySelector('.rail').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-rail]');
+      if (!btn) return;
+      const item = TOP_ITEMS.concat(BOTTOM_ITEMS).find((i) => i.key === btn.dataset.rail);
+      CRM.ui.toast(`"${item.tip}" ainda não tem função — vem numa próxima etapa.`);
+    });
+    CRM.ui.isolateEvents(host);
+    document.body.appendChild(host);
+  }
+
+  return { mount, TOP_ITEMS, BOTTOM_ITEMS };
+})();

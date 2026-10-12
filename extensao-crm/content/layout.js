@@ -1,17 +1,18 @@
-// Encaixe da barra de abas no topo: desce a tela do WhatsApp para a barra não
-// ficar por cima. Como não dá para saber de antemão como o WhatsApp monta a tela,
+// Encaixe das barras da extensão (abas no topo e menu na lateral esquerda): desce e
+// afasta a tela do WhatsApp para as barras não ficarem por cima. Como não dá para saber de antemão como o WhatsApp monta a tela,
 // cada modo é aplicado e CONFERIDO; se a tela ficar errada, desfaz e tenta o próximo.
 CRM.layout = (() => {
-  const H = 36;
+  const H = 36; // altura da barra de abas (topo)
+  const L = 38; // largura do menu lateral (esquerda)
   const ROOT = 'data-crm-root';
   const LAYER = 'data-crm-shift';
   const STYLE_ID = 'crm-ext-push';
 
   const MODES = {
-    root: 'Modo 1 — desce a tela principal',
-    layers: 'Modo 2 — desce também as camadas fixas',
-    transform: 'Modo 3 — desce tudo junto',
-    overlay: 'Modo 4 — barra por cima (não desce nada)',
+    root: 'Modo 1 — afasta a tela principal',
+    layers: 'Modo 2 — afasta também as camadas fixas',
+    transform: 'Modo 3 — afasta tudo junto',
+    overlay: 'Modo 4 — barras por cima (não mexe na tela)',
   };
   const AUTO_ORDER = ['root', 'layers', 'transform'];
 
@@ -59,11 +60,12 @@ CRM.layout = (() => {
 
   // Tela principal "fixa/absoluta": desce com top. Normal/relativa: desce com o espaço no body.
   function rootCss(position) {
-    const height = `height: calc(100vh - ${H}px) !important; max-height: calc(100vh - ${H}px) !important;`;
+    const size = `height: calc(100vh - ${H}px) !important; max-height: calc(100vh - ${H}px) !important;
+      max-width: calc(100vw - ${L}px) !important;`;
     return position === 'fixed' || position === 'absolute'
-      ? `[${ROOT}] { top: ${H}px !important; ${height} }`
-      : `body { padding-top: ${H}px !important; box-sizing: border-box !important; }
-         [${ROOT}] { ${height} }`;
+      ? `[${ROOT}] { top: ${H}px !important; left: ${L}px !important; width: calc(100vw - ${L}px) !important; ${size} }`
+      : `body { padding-top: ${H}px !important; padding-left: ${L}px !important; box-sizing: border-box !important; }
+         [${ROOT}] { ${size} }`;
   }
 
   function markLayers() {
@@ -75,7 +77,7 @@ CRM.layout = (() => {
         const pos = getComputedStyle(el).position;
         if (pos !== 'fixed' && pos !== 'absolute') continue;
         const r = el.getBoundingClientRect();
-        if (r.top < H - 1 && r.height > window.innerHeight * 0.5) el.setAttribute(LAYER, '');
+        if ((r.top < H - 1 || r.left < L - 1) && r.height > window.innerHeight * 0.5) el.setAttribute(LAYER, '');
       }
     }
   }
@@ -91,7 +93,8 @@ CRM.layout = (() => {
     if (mode === 'root') setStyle(ROOT_CSS);
     if (mode === 'layers') {
       setStyle(ROOT_CSS + `
-        [${LAYER}] { top: ${H}px !important; height: calc(100vh - ${H}px) !important; max-height: calc(100vh - ${H}px) !important; }`);
+        [${LAYER}] { top: ${H}px !important; left: ${L}px !important; width: calc(100vw - ${L}px) !important; max-width: calc(100vw - ${L}px) !important;
+          height: calc(100vh - ${H}px) !important; max-height: calc(100vh - ${H}px) !important; }`);
       markLayers();
     }
     if (mode === 'transform') {
@@ -108,6 +111,23 @@ CRM.layout = (() => {
     const list = anchors();
     if (!list.length) return null; // tela do WhatsApp ainda carregando
     const problems = [];
+    // As caixas grandes que envolvem a lista/conversa não podem ficar embaixo das barras.
+    const root = findRoot();
+    for (const el of list) {
+      for (let p = el; p && p !== document.body; p = p.parentElement) {
+        const r = p.getBoundingClientRect();
+        if (r.height < window.innerHeight * 0.5) continue;
+        if (r.left < L - 1) {
+          problems.push(`${p.id || p.tagName.toLowerCase()} fica embaixo do menu lateral (left ${Math.round(r.left)})`);
+          break;
+        }
+        if (r.right > window.innerWidth + 2) {
+          problems.push(`${p.id || p.tagName.toLowerCase()} passa da borda direita (right ${Math.round(r.right)})`);
+          break;
+        }
+        if (p === root) break;
+      }
+    }
     for (const el of list) {
       const r = el.getBoundingClientRect();
       const name = el.id || el.tagName;
@@ -211,5 +231,5 @@ CRM.layout = (() => {
     return lines.join('\n');
   }
 
-  return { start, setMode, diagnose, MODES, get mode() { return wanted; }, get applied() { return applied; }, HEIGHT: H };
+  return { start, setMode, diagnose, MODES, get mode() { return wanted; }, get applied() { return applied; }, HEIGHT: H, LEFT: L };
 })();
