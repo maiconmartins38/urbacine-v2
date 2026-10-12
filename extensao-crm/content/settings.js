@@ -57,6 +57,9 @@ CRM.settings = (() => {
     .st-code { font-family: Consolas, monospace; background: #fff; border: 1px solid #e3e6ea; border-radius: 6px; padding: 5px 7px; display: block; margin: 4px 0; font-size: 11.5px; user-select: all; word-break: break-all; }
     .st-paste { width: 100%; min-height: 70px; margin-top: 8px; }
     .st-center { display: flex; justify-content: center; margin-top: 14px; gap: 10px; }
+    .st-prog { height: 7px; background: #e3e8ea; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+    .st-prog i { display: block; height: 100%; background: linear-gradient(90deg, #24988d, #8ad2c7); transition: width .2s; }
+    .st-steps .btn-outline { margin-top: 2px; padding: 4px 10px; font-size: 12px; }
   `;
 
   let el = null;
@@ -129,29 +132,55 @@ CRM.settings = (() => {
   }
 
   const result = () => main.querySelector('[data-result]');
+  const mb = (n) => (n >= 1048576 ? (n / 1048576).toFixed(n >= 104857600 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+  let current = null; // { name, size, tree } do último arquivo lido (para copiar a estrutura)
 
+  // Barra de andamento dentro do quadro de resultado.
+  function progress(title, done, total, detail = '') {
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    result().innerHTML = `<div class="st-box"><b>${esc(title)}</b> ${pct}%${detail ? ` <span class="muted">· ${esc(detail)}</span>` : ''}
+      <div class="st-prog"><i style="width:${pct}%"></i></div></div>`;
+  }
+
+  // Lê o arquivo em pedaços: funciona com arquivo de qualquer tamanho.
   async function readFile(file) {
-    if (file.size > 200 * 1024 * 1024) return showError('Arquivo grande demais (máximo 200 MB).');
-    result().innerHTML = `<div class="st-box">Lendo <b>${esc(file.name)}</b>…</div>`;
-    let text;
+    current = null;
+    progress(`Lendo ${file.name}…`, 0, 1);
+    let insp;
     try {
-      text = await file.text();
+      insp = await CRM.backup.inspect(file, (done, total) => progress(`Lendo ${file.name}…`, done, total, `${mb(done)} de ${mb(total)}`));
     } catch (err) {
       return showError('Não consegui ler o arquivo: ' + err.message);
     }
-    handle(text, file.name);
+    handle(insp, file.name, file.size);
   }
 
   function showError(msg) {
     result().innerHTML = `<div class="st-box err"><h4>${icon('info', 15, 2)} Não deu para importar</h4>${esc(msg)}</div>`;
   }
 
-  async function handle(text, name) {
-    const p = CRM.backup.parse(text);
-    if (p.format === 'unknown') return showError(`${p.reason} Escolha o arquivo .json do backup.`);
-    if (p.format === 'crm') return showCRM(p.backup, name);
-    if (p.format === 'locked') return showLocked(p, name);
-    return showForeign(p.obj, name, false);
+  function handle(insp, name, size) {
+    if (insp.format === 'unknown') return showError(`${insp.reason} Escolha o arquivo .json do backup.`);
+    current = { name, size, tree: insp.format === 'crm' ? insp.backup : insp.obj };
+    if (insp.format === 'crm') return showCRM(insp.backup, name);
+    if (insp.format === 'locked') return showLocked(insp, name);
+    return showForeign(insp.obj, name, false);
+  }
+
+  // Botão que copia só a estrutura do arquivo (nomes das partes, tipos e tamanhos — sem mensagens nem números).
+  const structureButton = () => `<button class="btn-outline" data-structure>${icon('copy', 14)} Copiar estrutura do arquivo (sem o conteúdo)</button>`;
+  function bindStructure(box) {
+    const b = box.querySelector('[data-structure]');
+    if (!b || !current) return;
+    b.onclick = async () => {
+      const text = [`Arquivo: ${current.name} (${mb(current.size || 0)})`, ...CRM.backup.describe(current.tree)].join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        notice('Estrutura copiada — cole na conversa comigo');
+      } catch (_) {
+        b.insertAdjacentHTML('afterend', `<textarea class="textarea st-paste" readonly>${esc(text)}</textarea>`);
+      }
+    };
   }
 
   // Backup desta extensão.
@@ -167,18 +196,21 @@ CRM.settings = (() => {
         </div>
         <div class="st-center"><button class="btn" data-go>Importar</button></div>
       </div>`;
-    result().querySelector('[data-go]').onclick = async (e) => {
+    result().querySelector('[data-go]').onclick = async () => {
       const mode = result().querySelector('[name="mode"]:checked').value;
       if (mode === 'replace' && !confirm('Substituir os dados atuais pelos do backup? O que não estiver no backup será apagado dessas listas.')) return;
-      e.target.disabled = true;
+      progress('Importando…', 0, 1);
       try {
-        await CRM.backup.importCRM(backup, mode);
+        await CRM.backup.importCRM(backup, mode, (n, total) => progress('Gravando arquivos…', n, total, `${n} de ${total}`));
         done(rows.filter((r) => r.key !== 'settings').map((r) => `${r.count} ${r.label.toLowerCase()}`));
       } catch (err) {
         showError(err.message);
       }
     };
   }
+
+  // Comando que salva os dados da outra ferramenta num arquivo (roda no Console, no contexto dela).
+  const EXPORT_CMD = "chrome.storage.local.get(null,d=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));a.download='dados-abertos.json';a.click()})";
 
   // Backup de outra ferramenta, trancado.
   async function showLocked(p, name) {
@@ -192,81 +224,91 @@ CRM.settings = (() => {
     } catch (_) {
       // sem número; segue só com a senha digitada
     }
-    const opened = tried.length ? await CRM.backup.unlockAll(p.obj, tried) : null;
+    const opening = (n, total) => progress('Abrindo o backup…', n, total, `parte ${n} de ${total}`);
+    const opened = tried.length ? await CRM.backup.unlockAll(p.obj, tried, opening) : null;
     if (opened) return showForeign(opened.data, name, true);
+    const total = p.sections.reduce((s, x) => s + x.size, 0);
     box.innerHTML = `<div class="st-box warn">
         <h4>${svg(LOCK, 15)} Este backup é de outra ferramenta e está trancado</h4>
-        Reconheci o arquivo <b>${esc(name)}</b>, mas as partes dele estão <b>criptografadas</b> pela ferramenta que gerou
+        Li o arquivo <b>${esc(name)}</b> inteiro (${mb(total)}), mas as partes dele estão <b>criptografadas</b> pela ferramenta que gerou
         (padrão AES com senha). Sem a senha/chave dela não dá para ler o conteúdo — nenhuma extensão consegue.
-        <table class="st-table">${p.sections.map((s) => `<tr><td>${esc(s.label)}</td><td class="n">${s.locked ? '<span class="st-tag">trancado</span>' : 'aberto'}</td></tr>`).join('')}</table>
+        <table class="st-table">${p.sections.map((s) => `<tr><td>${esc(s.label)}</td><td class="n">${mb(s.size)} ${s.locked ? '<span class="st-tag">trancado</span>' : 'aberto'}</td></tr>`).join('')}</table>
         ${tried.length ? '<div style="margin-top:8px">Já tentei abrir com o número do seu WhatsApp e não abriu.</div>' : ''}
         <div style="margin-top:10px"><b>1) Tem a senha/chave desse backup?</b> Coloque aqui:</div>
         <div class="st-line"><input class="input" type="password" data-pass placeholder="Senha ou chave do backup"><button class="btn" data-try>Tentar abrir</button></div>
         <div class="error-msg" data-perr></div>
-        <div style="margin-top:12px"><b>2) Sem senha:</b> copie os dados abertos direto da outra extensão e cole aqui embaixo.</div>
+        <div style="margin-top:12px"><b>2) Sem senha:</b> salve os dados da outra ferramenta num arquivo e importe aqui.</div>
         <ol class="st-steps">
-          <li>Abra uma aba nova em <span class="st-code" style="display:inline;padding:1px 5px">chrome://extensions</span> e ligue o <b>Modo do desenvolvedor</b> (canto de cima, à direita).</li>
-          <li>No cartão da outra ferramenta, clique no link azul <b>service worker</b> (ou "página de plano de fundo"). Abre uma janela de ferramentas.</li>
-          <li>Clique na aba <b>Console</b>, cole este comando e aperte Enter (se o Chrome pedir, digite <b>allow pasting</b> antes):
-            <code class="st-code">copy(JSON.stringify(await chrome.storage.local.get(null)))</code></li>
-          <li>Volte aqui, clique no campo abaixo e aperte <b>Ctrl+V</b>.</li>
+          <li>Aqui no WhatsApp Web, aperte <b>F12</b> e clique na aba <b>Console</b>.</li>
+          <li>Em cima das mensagens do Console tem uma caixinha escrita <b>top</b>. Clique nela e escolha o <b>nome da outra ferramenta</b>.</li>
+          <li>Cole este comando e aperte <b>Enter</b> (se o Chrome pedir, digite <b>allow pasting</b> antes e aperte Enter):
+            <code class="st-code">${esc(EXPORT_CMD)}</code>
+            <button class="btn-outline" data-copycmd>${icon('copy', 14)} Copiar comando</button></li>
+          <li>Vai baixar o arquivo <b>dados-abertos.json</b>. Importe ele aqui em cima, em <b>Escolher o arquivo de backup</b>.</li>
         </ol>
-        <textarea class="textarea st-paste" data-paste placeholder="Cole aqui os dados copiados (Ctrl+V)"></textarea>
-        <div class="st-center"><button class="btn" data-read>Ler dados colados</button></div>
-        <div style="margin-top:8px" class="muted">Se mesmo assim não reconhecer, me mande esse texto colado como arquivo que eu ajusto o importador para o formato exato.</div>
+        <div style="margin-top:12px"><b>3) Me mande a estrutura</b> deste arquivo para eu conferir o formato (vai só o nome e o tamanho de cada parte, sem mensagens nem números):</div>
+        <div class="st-center">${structureButton()}</div>
       </div>`;
     const pass = box.querySelector('[data-pass]');
     const tryIt = async () => {
       const pw = pass.value;
       if (!pw) return (box.querySelector('[data-perr]').textContent = 'Digite a senha.');
       box.querySelector('[data-perr]').textContent = 'Tentando…';
-      const opened = await CRM.backup.unlockAll(p.obj, [pw, pw.trim()]);
-      if (opened) return showForeign(opened.data, name, true);
-      box.querySelector('[data-perr]').textContent = 'Essa senha não abriu o backup.';
+      const ok = await CRM.backup.unlockAll(p.obj, [pw, pw.trim()], opening);
+      if (ok) return showForeign(ok.data, name, true);
+      if (!result().querySelector('[data-perr]')) await showLocked(p, name); // a barra de andamento tomou o lugar da tela
+      result().querySelector('[data-perr]').textContent = 'Essa senha não abriu o backup.';
     };
     box.querySelector('[data-try]').onclick = tryIt;
     pass.addEventListener('keydown', (e) => e.key === 'Enter' && tryIt());
-    box.querySelector('[data-read]').onclick = () => {
-      const text = box.querySelector('[data-paste]').value.trim();
-      if (!text) return toast('Cole os dados no campo primeiro.', 'err');
-      const parsed = CRM.backup.parse(text);
-      if (parsed.format === 'unknown') return toast('O texto colado não é um JSON válido. Copie de novo com o comando acima.', 'err');
-      if (parsed.format === 'crm') return showCRM(parsed.backup, 'dados colados');
-      if (parsed.format === 'locked') return showForeign(parsed.obj, 'dados colados', false, true);
-      showForeign(parsed.obj, 'dados colados', false);
+    box.querySelector('[data-copycmd]').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(EXPORT_CMD);
+        notice('Comando copiado');
+      } catch (_) {
+        toast('Não consegui copiar. Selecione o comando com o mouse e copie (Ctrl+C).', 'err');
+      }
     };
+    bindStructure(box);
   }
 
   // Dados abertos de outra ferramenta: mostra o que foi encontrado antes de importar.
-  function showForeign(data, name, unlocked, stillLocked = false) {
+  function showForeign(data, name, unlocked) {
     const m = CRM.backup.mapForeign(data);
     const rows = CRM.backup.summaryForeign(m);
     const total = rows.reduce((s, r) => s + r.count, 0);
-    const keys = data && typeof data === 'object' ? Object.keys(data).slice(0, 30) : [];
     const notes = [];
+    if (m.mediaBytes) notes.push(`Os arquivos somam ${mb(m.mediaBytes)} e são gravados um por um ao importar.`);
     if (m.linkedMedia) notes.push(`${m.linkedMedia} mídia(s) estavam só como link e viraram texto com o link.`);
     if (m.skipped.length) notes.push(`${m.skipped.length} ação(ões) não puderam ser trazidas (${esc([...new Set(m.skipped)].join(', '))}).`);
-    if (stillLocked) notes.push('Parte desses dados também está trancada (criptografada) e foi ignorada.');
+    if (data && typeof data === 'object' && Object.values(data).some((v) => typeof v === 'string' ? v.startsWith('U2FsdGVkX1') : CRM.backup.isRef(v) && v.head.startsWith('U2FsdGVkX1'))) {
+      notes.push('Parte desses dados também está trancada (criptografada) e foi ignorada.');
+    }
     if (!total) {
       result().innerHTML = `<div class="st-box warn"><h4>${icon('info', 15, 2)} ${unlocked ? 'Backup aberto, mas' : 'Arquivo lido, mas'} não reconheci os dados</h4>
         Não encontrei respostas rápidas, categorias nem abas em <b>${esc(name)}</b>.
-        ${keys.length ? `<div style="margin-top:6px">Partes encontradas: ${keys.map((k) => `<span class="st-code" style="display:inline;padding:1px 5px">${esc(k)}</span>`).join(' ')}</div>` : ''}
         ${notes.length ? `<div style="margin-top:6px">${notes.join('<br>')}</div>` : ''}
-        <div style="margin-top:8px">Me mande esse arquivo que eu ajusto o importador para esse formato.</div></div>`;
+        <div style="margin-top:8px">Copie a estrutura do arquivo e me mande, que eu ajusto o importador para esse formato (vai só o nome e o tamanho de cada parte, sem mensagens nem números).</div>
+        <div class="st-center">${structureButton()}</div></div>`;
+      if (unlocked) current = { ...(current || {}), name, tree: data };
+      bindStructure(result());
       return;
     }
     result().innerHTML = `<div class="st-box ok">
         <h4>${icon('checkCircle', 15)} ${unlocked ? 'Backup aberto!' : 'Dados reconhecidos'} Veja o que encontrei:</h4>
-        <table class="st-table">${rows.map((r) => `<tr><td>${esc(r.label)}${r.sample.length ? `<div class="sample">${r.sample.map(esc).join(' · ')}${r.count > r.sample.length ? ' …' : ''}</div>` : ''}</td><td class="n">${r.count}</td></tr>`).join('')}</table>
+        <table class="st-table">${rows.filter((r) => r.count || r.key !== 'media').map((r) => `<tr><td>${esc(r.label)}${r.sample.length ? `<div class="sample">${r.sample.map(esc).join(' · ')}${r.count > r.sample.length ? ' …' : ''}</div>` : ''}</td><td class="n">${r.count}</td></tr>`).join('')}</table>
         ${notes.length ? `<div style="margin-top:8px">${notes.join('<br>')}</div>` : ''}
         <div style="margin-top:8px" class="muted">Vai somar ao que você já tem. Respostas iguais (mesmo título e mesmo conteúdo) e categorias/abas com o mesmo nome não são repetidas.</div>
         <div class="st-center"><button class="btn" data-go>Importar</button></div>
       </div>`;
-    result().querySelector('[data-go]').onclick = async (e) => {
-      e.target.disabled = true;
+    result().querySelector('[data-go]').onclick = async () => {
+      progress('Importando…', 0, 1);
       try {
-        const r = await CRM.backup.importForeign(m);
-        done([`${r.added} respostas rápidas novas`, `${m.quickCategories.length} categorias`, `${m.tabs.length} abas`]);
+        const r = await CRM.backup.importForeign(m, (n, t) => progress('Gravando arquivos…', n, t, `${n} de ${t}`));
+        const parts = [`${r.added} respostas rápidas novas`, `${m.quickCategories.length} categorias`, `${m.tabs.length} abas`];
+        if (r.media) parts.push(`${r.media} arquivos`);
+        if (r.failedMedia) parts.push(`${r.failedMedia} arquivos não puderam ser gravados`);
+        done(parts);
       } catch (err) {
         showError(err.message);
       }

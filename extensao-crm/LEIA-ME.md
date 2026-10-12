@@ -32,14 +32,19 @@ No próprio Chrome (`chrome.storage.local`), só neste computador e neste perfil
 
 ### Importar backup (engrenagem ⚙ no fim do menu da esquerda → Geral)
 
+- O arquivo é lido em pedaços, então pode ser de qualquer tamanho. Imagens, áudios e vídeos
+  só são lidos do arquivo na hora de gravar.
 - **Backup desta extensão**: importa tudo (respostas rápidas, categorias, abas, cadastros,
   anotações, agendamentos, renovações e arquivos). Dá para somar ao que já existe ou substituir.
 - **Backup de outra ferramenta**: se as partes do arquivo estiverem criptografadas (começam com
   `U2FsdGVkX1`), só abre com a senha/chave de quem gerou. A extensão tenta sozinha com o número
-  do WhatsApp e aceita uma senha digitada. Sem senha, dá para colar os dados abertos copiados
-  da outra extensão (passo a passo na própria tela).
-- Dados abertos de outra ferramenta: a extensão procura respostas rápidas, categorias e abas
-  e mostra o que achou antes de importar. Não repete respostas iguais.
+  do WhatsApp e aceita uma senha digitada. Sem senha, a própria tela mostra como salvar os dados
+  abertos da outra ferramenta num arquivo (`dados-abertos.json`) para importar.
+- Dados abertos de outra ferramenta: a extensão procura respostas rápidas (com imagens, áudios
+  e vídeos que estejam dentro do arquivo), categorias e abas e mostra o que achou antes de
+  importar. Não repete respostas iguais.
+- "Copiar estrutura do arquivo" copia só os nomes e tamanhos das partes (sem mensagens nem
+  números), para ajustar o importador a um formato novo.
 
 ## Técnico
 
