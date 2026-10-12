@@ -101,7 +101,7 @@
     clearInterval(placeTimer);
     clearInterval(tickTimer);
     if (barHost) barHost.remove();
-    ['crm-ext-host', 'crm-ext-tabs', 'crm-ext-rail', 'crm-ext-name', 'crm-ext-push'].forEach((id) => {
+    ['crm-ext-host', 'crm-ext-tabs', 'crm-ext-rail', 'crm-ext-name', 'crm-ext-abas', 'crm-ext-push'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
@@ -117,12 +117,14 @@
     if (!alive()) return shutdown();
     place();
     CRM.contactName.place();
+    CRM.chatTabs.place();
   }, 700);
   window.addEventListener('resize', place);
 
   CRM.wa.on('activeChat', () => {
     place();
     CRM.contactName.place();
+    CRM.chatTabs.place();
     refreshBadges();
   });
   CRM.wa.on('ready', () => {

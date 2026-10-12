@@ -402,10 +402,46 @@ CRM.tabs = (() => {
     if (selectedId && (selectedId === fromId || selectedId === toId)) applyFilter();
   }
 
+  // Liga ou tira uma conversa de uma aba (atalho "Abas" no topo da conversa).
+  // Ao ligar, essa aba passa a ser a do Kanban no Cadastro do cliente.
+  async function setChatInTab(chatId, tabId, on) {
+    await updateTabs((all) => all.map((t) => {
+      if (t.id !== tabId) return t;
+      const ids = t.chatIds || [];
+      return { ...t, chatIds: on ? [...new Set([...ids, chatId])] : ids.filter((x) => x !== chatId) };
+    }));
+    await syncClients(on ? { [chatId]: tabId } : {});
+    if (selectedId === tabId) applyFilter();
+  }
+
+  // Mantém o campo Kanban do Cadastro igual às abas:
+  // - "prefer" diz qual aba acabou de receber a conversa (vira a do Kanban);
+  // - se a aba do Kanban não tem mais a conversa (ou foi apagada), passa para outra aba
+  //   em que ela esteja, ou "Nenhuma".
+  async function syncClients(prefer = {}) {
+    const tabs = await getTabs();
+    const clients = await store.getClients();
+    const needs = clients.some((c) => {
+      const inTabs = tabs.filter((t) => (t.chatIds || []).includes(c.chatId)).map((t) => t.id);
+      return prefer[c.chatId] ? prefer[c.chatId] !== c.kanbanColumnId : (c.kanbanColumnId ? !inTabs.includes(c.kanbanColumnId) : inTabs.length > 0);
+    });
+    if (!needs) return;
+    await store.updateClients((list) => list.map((c) => {
+      const inTabs = tabs.filter((t) => (t.chatIds || []).includes(c.chatId)).map((t) => t.id);
+      let k = c.kanbanColumnId || null;
+      if (prefer[c.chatId] && inTabs.includes(prefer[c.chatId])) k = prefer[c.chatId];
+      else if (!k || !inTabs.includes(k)) k = inTabs[0] || null;
+      return k === (c.kanbanColumnId || null) ? c : { ...c, kanbanColumnId: k, updatedAt: Date.now() };
+    }));
+  }
+
   store.onChange((changes) => {
-    if (changes.tabs) render();
+    if (changes.tabs) {
+      render();
+      syncClients();
+    }
   });
   CRM.wa.on('ready', () => selectedId && applyFilter());
 
-  return { mount, list: getTabs, tabOf, moveChat };
+  return { mount, list: getTabs, tabOf, moveChat, setChatInTab };
 })();

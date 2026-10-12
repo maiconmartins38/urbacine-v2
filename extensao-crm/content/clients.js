@@ -49,6 +49,7 @@ CRM.clients = (() => {
       (a.name || '').localeCompare(b.name || '', 'pt-BR')
     );
     const canAdd = chat && !all.some((c) => c.chatId === chat.id);
+    const tabNames = Object.fromEntries((await CRM.tabs.list()).map((t) => [t.id, t.name]));
 
     const head = `<div class="modal-head">
       <h2 class="modal-title">Cadastro</h2>
@@ -58,7 +59,7 @@ CRM.clients = (() => {
     </div>`;
 
     const body = list.length
-      ? `<div class="list">${list.map(itemHTML).join('')}</div>
+      ? `<div class="list">${list.map((c) => itemHTML(c, tabNames)).join('')}</div>
          <div class="center">${canAdd ? '<button class="btn" data-add>Adicionar</button>' : ''}</div>`
       : `<div class="empty">
           <div class="empty-icon">${icon('client', 24)}</div>
@@ -85,7 +86,7 @@ CRM.clients = (() => {
     );
   }
 
-  function itemHTML(c) {
+  function itemHTML(c, tabNames = {}) {
     return `<div class="item">
       <div class="item-icon">${icon('client', 18)}</div>
       <div class="item-body">
@@ -93,6 +94,7 @@ CRM.clients = (() => {
         <div class="item-meta">
           ${c.phone ? `<span>📞 ${esc(formatPhone(c.phone))}</span>` : ''}
           <span>💰 ${esc(formatMoney(c.valueCents))}</span>
+          <span>📂 Kanban: ${esc(tabNames[c.kanbanColumnId] || 'Nenhuma')}</span>
         </div>
         ${c.description ? `<div class="item-text" style="margin-top:4px">${esc(c.description)}</div>` : ''}
         <div class="item-meta"><span>Cadastrado em ${esc(formatDateTime(c.createdAt))}</span></div>
