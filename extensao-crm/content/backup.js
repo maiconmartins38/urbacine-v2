@@ -409,11 +409,17 @@ CRM.backup = (() => {
   }
 
   // mode: 'merge' (soma ao que já existe; o que tiver o mesmo id é trocado) ou 'replace' (troca tudo).
+  const plainName = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+
   async function importCRM(backup, mode, onProgress) {
     const d = backup.data;
-    for (const k of KEYS) {
+    // Ao somar, abas e categorias com o mesmo nome (ex.: as abas padrão) viram uma só:
+    // os contatos se juntam e o que apontava para a do backup passa a apontar para a que já existe.
+    const remap = { tabs: {}, quickCategories: {} };
+    const ORDER = ['tabs', 'quickCategories', ...KEYS.filter((k) => k !== 'tabs' && k !== 'quickCategories')];
+    for (const k of ORDER) {
       if (d[k] === undefined) continue;
-      const value = await materialize(d[k]);
+      let value = await materialize(d[k]);
       if (k === 'settings') {
         if (mode === 'replace') await store.set('settings', value);
         continue;
@@ -423,6 +429,33 @@ CRM.backup = (() => {
         continue;
       }
       if (!Array.isArray(value)) continue;
+      if (mode === 'merge' && (k === 'tabs' || k === 'quickCategories')) {
+        await store.serialUpdate(k, [], (cur) => {
+          for (const x of value) {
+            if (!x || cur.some((c) => c.id === x.id)) continue;
+            const same = cur.find((c) => plainName(c.name) === plainName(x.name));
+            if (!same) cur.push(x);
+            else {
+              remap[k][x.id] = same.id;
+              if (k === 'tabs') same.chatIds = [...new Set([...(same.chatIds || []), ...(x.chatIds || [])])];
+            }
+          }
+          for (const x of value) {
+            const i = cur.findIndex((c) => x && c.id === x.id);
+            if (i >= 0) cur[i] = k === 'tabs' ? { ...x, chatIds: [...new Set([...(cur[i].chatIds || []), ...(x.chatIds || [])])] } : x;
+          }
+          return cur;
+        });
+        continue;
+      }
+      if (k === 'clients') value = value.map((c) => (c && remap.tabs[c.kanbanColumnId] ? { ...c, kanbanColumnId: remap.tabs[c.kanbanColumnId] } : c));
+      if (k === 'quickReplies') {
+        value = value.map((q) => (q ? {
+          ...q,
+          categoryId: remap.quickCategories[q.categoryId] || q.categoryId,
+          actions: (q.actions || []).map((a) => (a && remap.tabs[a.tabId] ? { ...a, tabId: remap.tabs[a.tabId] } : a)),
+        } : q));
+      }
       await store.serialUpdate(k, [], (cur) => {
         if (mode === 'replace') return value;
         const byId = new Map(cur.map((x) => [x.id, x]));
@@ -699,7 +732,7 @@ CRM.backup = (() => {
     const cats = await store.get('quickCategories', []);
     const catMap = new Map(); // id importado -> id final
     for (const c of m.quickCategories) {
-      const same = cats.find((x) => x.name.trim().toLowerCase() === c.name.trim().toLowerCase());
+      const same = cats.find((x) => plainName(x.name) === plainName(c.name));
       if (same) catMap.set(c.id, same.id);
       else {
         cats.push(c);
@@ -738,7 +771,7 @@ CRM.backup = (() => {
 
     await store.serialUpdate('tabs', [], (all) => {
       for (const t of m.tabs) {
-        const same = all.find((x) => x.name.trim().toLowerCase() === t.name.trim().toLowerCase());
+        const same = all.find((x) => plainName(x.name) === plainName(t.name));
         if (same) same.chatIds = [...new Set([...(same.chatIds || []), ...t.chatIds])];
         else all.push(t);
       }
