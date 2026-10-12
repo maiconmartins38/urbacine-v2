@@ -98,6 +98,12 @@ svg { display: block; }
 }
 .actions { display: flex; justify-content: space-around; margin-top: 20px; }
 
+/* ---------- Vencimento no cadastro (ciclo de renovação) ---------- */
+.cycle { border: 1px solid #d7e9e6; border-radius: 10px; padding: 10px 12px 6px; margin: 4px 0 12px; background: #f7fbfa; }
+.cycle-title { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13.5px; margin-bottom: 8px; color: #1c4f4a; }
+.cycle-title svg { color: var(--teal); }
+.cycle-stage { font-size: 12px; background: var(--teal-soft); border-radius: 7px; padding: 6px 8px; margin-bottom: 10px; color: #1c4f4a; }
+
 /* ---------- Estado vazio ---------- */
 .empty { text-align: center; padding: 6px 10px 4px; color: var(--muted); }
 .empty .empty-icon { color: var(--teal); display: grid; place-items: center; margin-bottom: 8px; }

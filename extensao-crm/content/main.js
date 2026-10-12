@@ -6,7 +6,7 @@
   const BUTTONS = [
     { key: 'clients', icon: 'client', tip: 'Cadastro', open: () => CRM.clients.openList({ fresh: true }) },
     { key: 'renewed', icon: 'renewed', tip: 'Renovado', open: () => CRM.renewals.markRenewed() },
-    { key: 'renewals', icon: 'renew', tip: 'Mensagens de Renovação', open: () => CRM.renewals.openList({ fresh: true }) },
+    { key: 'remarketing', icon: 'megaphone', tip: 'Remarketing', open: () => CRM.remarketing.open() },
     { key: 'schedules', icon: 'schedule', tip: 'Mensagens Agendadas', open: () => CRM.schedules.openList({ fresh: true }) },
     { key: 'notes', icon: 'notes', tip: 'Anotações', open: () => CRM.notes.openList() },
   ];
@@ -81,7 +81,7 @@
     const chat = CRM.wa.state.activeChat;
     const counts = {
       clients: chat ? await CRM.clients.countFor(chat.id) : 0,
-      renewals: chat ? await CRM.renewals.activeCount(chat.id) : 0,
+      remarketing: chat ? await CRM.renewals.inRemarketing(chat.id) : 0,
       schedules: chat ? await CRM.schedules.pendingCount(chat.id) : 0,
       notes: chat ? await CRM.notes.countFor(chat.id) : 0,
     };
@@ -137,18 +137,23 @@
   });
   CRM.wa.on('ready', () => {
     CRM.wa.refreshActiveChat().then(refreshBadges);
-    CRM.schedules.tick();
+    tick();
   });
   CRM.store.onChange((changes) => {
     if (changes.schedules || changes.notes || changes.renewals || changes.clients) refreshBadges();
   });
 
+  // Envia o que está na hora e depois anda com o ciclo de renovação (mês → NUTRIR → REMARKTING).
+  async function tick() {
+    await CRM.schedules.tick();
+    await CRM.renewals.lifecycle();
+  }
   const tickTimer = setInterval(() => {
     if (!alive()) return shutdown();
-    CRM.schedules.tick();
+    tick();
   }, 20000);
 
   chrome.runtime.onMessage.addListener((msg) => {
-    if (msg && msg.type === 'crm-tick') CRM.schedules.tick();
+    if (msg && msg.type === 'crm-tick') tick();
   });
 })();

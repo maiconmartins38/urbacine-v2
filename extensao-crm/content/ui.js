@@ -70,6 +70,7 @@ CRM.ui = (() => {
     tag: '<path d="M3.5 12V4.5a1 1 0 0 1 1-1H12l8.5 8.5-8 8z"/><circle cx="8" cy="8" r="1.5"/>',
     money: '<path d="M12 3v18M16.3 7.3C15.7 6 14.2 5.2 12.2 5.2c-2.4 0-4.2 1.2-4.2 3.1 0 4.6 8.4 2.6 8.4 7.3 0 1.9-1.9 3.2-4.3 3.2-2.2 0-3.8-.9-4.4-2.4"/>',
     renewed: '<circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l3 3 5.4-5.8"/>',
+    megaphone: '<path d="M4 10v4a1 1 0 0 0 1 1h2l5 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/>',
   };
 
   const icon = (name, size, stroke) => svg(ICONS[name], size, stroke);

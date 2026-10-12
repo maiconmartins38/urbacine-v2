@@ -30,6 +30,21 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 - Se o WhatsApp Web estiver fechado no horário, a engrenagem ⚙ da tela de agendamentos
   define o que fazer: enviar quando abrir, ou não enviar.
 
+## Ciclo de renovação (Cadastro → mês → NUTRIR → REMARKTING)
+
+1. No **Cadastro** do cliente, preencha o vencimento (data e hora) e as mensagens rápidas
+   (1 dia antes e no dia; 1 dia depois). O cliente entra sozinho na aba do mês do vencimento.
+2. Depois que a mensagem de 1 dia depois sai, ele vai para **NUTRIR** e o valor do cadastro é zerado.
+3. Se ficar 3 dias em NUTRIR sem renovar, vai para **REMARKTING**: os envios da renovação são
+   apagados e entra a mensagem do botão **Remarketing**, no dia do vencimento seguinte
+   (30 dias depois), no mesmo horário.
+4. Renovou? Botão **Renovado** (ou abra o Cadastro), confira a nova data e o valor e salve:
+   o cliente volta para a aba do mês e o ciclo recomeça.
+
+No botão **Remarketing** dá para escolher a mensagem (texto, mídia, áudio ou mensagem rápida),
+repetir a cada 30 dias, mudar os dias em NUTRIR e ver quem está em NUTRIR e em REMARKTING.
+Se você tirar o cliente da aba NUTRIR na mão, a automação dele para.
+
 ## Onde ficam os dados
 
 No próprio Chrome (`chrome.storage.local`), só neste computador e neste perfil do Chrome.

@@ -37,6 +37,9 @@ CRM.panel = (() => {
     .pf-box.area { align-items: flex-start; } .pf-box.area svg { margin-top: 8px; }
     .pc-meta { color: var(--muted); font-size: 11.5px; text-align: center; margin-top: 8px; }
     .pc-save { width: 100%; margin-top: 4px; }
+    .pc-tab { font-size: 12px; color: #3b4a54; display: flex; align-items: center; gap: 5px; margin: -2px 0 10px; }
+    .cycle .row { display: block; }
+    .cycle .quick-card { padding: 8px; }
     .p-empty { text-align: center; color: var(--muted); padding: 30px 10px; font-size: 13px; }
     .p-empty .empty-icon { color: var(--teal); display: grid; place-items: center; margin-bottom: 8px; }
     .opener { position: absolute; inset: 0; border: 0; background: var(--teal); color: #fff; border-radius: 10px 0 0 10px; display: grid; place-items: center; cursor: pointer;
@@ -85,7 +88,7 @@ CRM.panel = (() => {
     CRM.wa.on('ready', () => open && render());
     store.onChange((changes) => {
       if (!open) return;
-      if (tab === 'client' && !dirty && (changes.clients || changes.tabs)) render();
+      if (tab === 'client' && !dirty && (changes.clients || changes.tabs || changes.renewals)) render();
       if (tab === 'quick' && (changes.quickReplies || changes.quickCategories || changes.tabs)) CRM.quickPanel.onDataChange();
     });
   }
@@ -143,7 +146,8 @@ CRM.panel = (() => {
       return;
     }
     const c = (await CRM.clients.forChat(chat.id)) || null;
-    const tabs = await CRM.tabs.list();
+    const r = await CRM.renewals.forChat(chat.id);
+    const cycle = await CRM.renewals.initialState(r);
     const current = await CRM.tabs.tabOf(chat.id, c && c.kanbanColumnId);
     const phone = (c && c.phone) || chat.phone || '';
     const name = c ? c.name : chat.name || chat.pushname || '';
@@ -155,16 +159,16 @@ CRM.panel = (() => {
       <div class="pf"><div class="pf-label">Nome do cliente</div><div class="pf-box">${icon('user', 15)}<input name="name" placeholder="Nome do cliente" value="${esc(name)}"></div></div>
       <div class="pf"><div class="pf-label">Telefone</div><div class="pf-box">${icon('contactCard', 15)}<input name="phone" placeholder="Telefone" value="${esc(CRM.clients.formatPhone(phone))}"></div></div>
       <div class="pf"><div class="pf-label">Valor (lucro)</div><div class="pf-box">${icon('money', 15)}<input name="value" inputmode="decimal" placeholder="R$ 0,00" value="${c && c.valueCents != null ? esc(CRM.clients.formatMoney(c.valueCents)) : ''}"></div></div>
-      <div class="pf"><div class="pf-label">Kanban</div><div class="pf-box">${icon('folderGo', 15)}<select name="kanban" ${tabs.length ? '' : 'disabled'}>
-        ${tabs.length ? '<option value="">Nenhuma</option>' + tabs.map((t) => `<option value="${t.id}" ${current && current.id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('') : '<option value="">Nenhuma aba criada</option>'}
-      </select></div></div>
+      <div class="pc-tab">${icon('folderGo', 14)} Aba: <b>${esc(current ? current.name : 'nenhuma')}</b></div>
       <div class="pf"><div class="pf-label">Descrição</div><div class="pf-box area">${icon('notes', 15)}<textarea name="description" placeholder="Escreva livremente (ex.: nomes dos servidores)">${esc((c && c.description) || '')}</textarea></div></div>
+      ${CRM.renewals.fieldsHTML({ compact: true, stage: await CRM.renewals.stageText(r) })}
       <div class="error-msg" data-perr style="min-height:0"></div>
       <button class="btn pc-save" data-psave>${c ? 'Salvar' : 'Cadastrar'}</button>
       <div class="pc-meta">${c ? 'Cadastrado em ' + esc(CRM.util.formatDateTime(c.createdAt)) : 'Este contato ainda não tem cadastro.'}</div>`;
 
     const field = (n) => box.querySelector(`[name="${n}"]`);
     box.querySelectorAll('input, textarea, select').forEach((el) => el.addEventListener('input', () => (dirty = true)));
+    const cycleFields = await CRM.renewals.bindFields(box, cycle, () => (dirty = true));
     field('value').addEventListener('blur', () => {
       const cents = CRM.clients.parseMoney(field('value').value);
       if (cents != null) field('value').value = CRM.clients.formatMoney(cents);
@@ -181,18 +185,14 @@ CRM.panel = (() => {
       });
     box.querySelector('[data-psave]').addEventListener('click', async () => {
       const err = box.querySelector('[data-perr]');
-      const nameValue = field('name').value.trim();
-      const valueText = field('value').value.trim();
-      const cents = valueText ? CRM.clients.parseMoney(valueText) : 0;
-      if (!nameValue) return (err.textContent = 'Escreva o nome do cliente.');
-      if (cents == null) return (err.textContent = 'Valor inválido. Exemplo: 150,00');
-      await CRM.clients.saveFor(chat.id, {
-        name: nameValue,
+      const result = await CRM.clients.saveAll(chat.id, {
+        name: field('name').value.trim(),
         phone: field('phone').value.replace(/\D/g, ''),
         description: field('description').value.trim(),
-        valueCents: cents,
-        kanbanColumnId: field('kanban').value || null,
-      });
+        valueText: field('value').value.trim(),
+      }, cycle, r, cycleFields);
+      if (result.cancelled) return;
+      if (result.error) return (err.textContent = result.error);
       dirty = false;
       notice(c ? 'Cadastro atualizado' : 'Cliente cadastrado');
       renderClient();

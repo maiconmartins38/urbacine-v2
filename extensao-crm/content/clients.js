@@ -1,6 +1,7 @@
 // Cadastro do cliente: nome, telefone (puxado da conversa), descrição livre
-// (ex.: nomes dos servidores) e valor de lucro.
-// O campo "Kanban" coloca o cliente numa das abas do topo (kanbanColumnId = id da aba).
+// (ex.: nomes dos servidores), valor de lucro e o vencimento (ciclo de renovação).
+// A aba do Kanban é automática: o vencimento põe o cliente na aba do mês, e o ciclo
+// leva para NUTRIR e REMARKTING (ver renewals.js).
 CRM.clients = (() => {
   const { esc, uid, formatDateTime } = CRM.util;
   const { icon, modal, toast } = CRM.ui;
@@ -52,6 +53,7 @@ CRM.clients = (() => {
     );
     const canAdd = chat && !all.some((c) => c.chatId === chat.id);
     const tabNames = Object.fromEntries((await CRM.tabs.list()).map((t) => [t.id, t.name]));
+    const cycles = Object.fromEntries((await store.getRenewals()).map((r) => [r.chatId, r]));
 
     const head = `<div class="modal-head">
       <h2 class="modal-title">Cadastro</h2>
@@ -61,12 +63,12 @@ CRM.clients = (() => {
     </div>`;
 
     const body = list.length
-      ? `<div class="list">${list.map((c) => itemHTML(c, tabNames)).join('')}</div>
+      ? `<div class="list">${list.map((c) => itemHTML(c, tabNames, cycles[c.chatId])).join('')}</div>
          <div class="center">${canAdd ? '<button class="btn" data-add>Adicionar</button>' : ''}</div>`
       : `<div class="empty">
           <div class="empty-icon">${icon('client', 24)}</div>
           <h3>${showAll ? 'Nenhum cliente cadastrado' : 'Este contato ainda não tem cadastro'}</h3>
-          <p>Cadastre o cliente com nome, telefone, descrição e valor.</p>
+          <p>Cadastre o cliente com nome, telefone, descrição, valor e o vencimento.</p>
           ${canAdd ? '<button class="btn" data-add>Adicionar</button>' : ''}
         </div>`;
 
@@ -81,23 +83,30 @@ CRM.clients = (() => {
     );
     el.querySelectorAll('[data-del]').forEach((b) =>
       b.addEventListener('click', async () => {
-        if (!confirm('Excluir este cadastro?')) return;
-        await store.updateClients((l) => l.filter((c) => c.id !== b.dataset.del));
+        const c = all.find((x) => x.id === b.dataset.del);
+        if (!confirm('Excluir este cadastro? O vencimento e as mensagens de renovação dele também serão apagados.')) return;
+        await store.updateClients((l) => l.filter((x) => x.id !== c.id));
+        await CRM.renewals.removeCycle(c.chatId);
         openList();
       })
     );
   }
 
-  function itemHTML(c, tabNames = {}) {
+  function itemHTML(c, tabNames = {}, r = null) {
+    const R = CRM.renewals;
+    const stage = R.stageOf(r);
     return `<div class="item">
       <div class="item-icon">${icon('client', 18)}</div>
       <div class="item-body">
         <div class="item-title">${esc(c.name || 'Sem nome')}</div>
         <div class="item-meta">
           ${c.phone ? `<span>📞 ${esc(formatPhone(c.phone))}</span>` : ''}
-          <span>💰 ${esc(formatMoney(c.valueCents))}</span>
-          <span>📂 Kanban: ${esc(tabNames[c.kanbanColumnId] || 'Nenhuma')}</span>
+          <span>💰 ${c.valueCents != null ? esc(formatMoney(c.valueCents)) : 'sem valor'}</span>
+          <span>📂 ${esc(tabNames[c.kanbanColumnId] || 'Nenhuma aba')}</span>
         </div>
+        ${r ? `<div class="item-meta"><span>📅 Vence ${esc(R.shortDate(r.dueDate))} às ${esc(r.time)}</span>
+          ${stage !== 'active' ? `<span class="status ${stage === 'remarketing' ? 'error' : 'pending'}">${esc(R.STAGE_LABEL[stage] || stage)}</span>` : ''}
+          ${r.renewCount ? `<span>✅ Renovou ${r.renewCount}x</span>` : ''}</div>` : ''}
         ${c.description ? `<div class="item-text" style="margin-top:4px">${esc(c.description)}</div>` : ''}
         <div class="item-meta"><span>Cadastrado em ${esc(formatDateTime(c.createdAt))}</span></div>
       </div>
@@ -109,64 +118,79 @@ CRM.clients = (() => {
   }
 
   // ---------- Tela: cadastrar / editar ----------
-  async function openForm(existing) {
+  // renew: aberto pelo botão "Renovado" (vencimento +30 dias e o valor de antes já preenchidos).
+  async function openForm(existing, { renew = false } = {}) {
     const chat = CRM.wa.state.activeChat;
     if (!existing && !chat) return toast('Abra a conversa do cliente primeiro.', 'err');
     const editing = !!existing;
     const c = existing || {};
     const chatId = c.chatId || chat.id;
-    const tabs = await CRM.tabs.list();
-    const currentTab = await CRM.tabs.tabOf(chatId, c.kanbanColumnId);
-    const phone = c.phone || (chat && chat.phone) || '';
+    const phone = c.phone || (chat && chat.id === chatId && chat.phone) || '';
     const name = c.name != null ? c.name : (chat && (chat.name || chat.pushname)) || '';
+    const r = await CRM.renewals.forChat(chatId);
+    const cycle = await CRM.renewals.initialState(r, { renew });
+    const cents = c.valueCents != null ? c.valueCents : renew && c.previousValueCents != null ? c.previousValueCents : null;
 
-    const el = modal(`<div class="modal-head"><h2 class="modal-title">${editing ? 'Editar Cadastro' : 'Cadastrar Cliente'}</h2></div>
+    const el = modal(`<div class="modal-head"><h2 class="modal-title">${renew ? 'Renovar' : editing ? 'Editar Cadastro' : 'Cadastrar Cliente'}</h2></div>
       <div class="field"><div class="label">Nome do cliente</div>
         <input class="input" name="name" placeholder="Nome do cliente" value="${esc(name)}"></div>
-      <div class="field"><div class="label">Telefone ${CRM.ui.infoHTML('Puxado automaticamente da conversa aberta.')}</div>
-        <input class="input" name="phone" placeholder="Ex.: +55 38 99865-7020" value="${esc(formatPhone(phone))}"></div>
+      <div class="row field">
+        <div><div class="label">Telefone ${CRM.ui.infoHTML('Puxado automaticamente da conversa aberta.')}</div>
+          <input class="input" name="phone" placeholder="Ex.: +55 38 99865-7020" value="${esc(formatPhone(phone))}"></div>
+        <div><div class="label">Valor (lucro)</div>
+          <input class="input" name="value" inputmode="decimal" placeholder="R$ 0,00" value="${cents != null ? esc(formatMoney(cents)) : ''}"></div>
+      </div>
       <div class="field"><div class="label">Descrição</div>
         ${CRM.ui.textareaHTML({ name: 'description', placeholder: 'Escreva livremente (ex.: nomes dos servidores)', value: c.description || '' })}</div>
-      <div class="row field">
-        <div><div class="label">Valor (lucro)</div>
-          <input class="input" name="value" inputmode="decimal" placeholder="R$ 0,00" value="${c.valueCents != null ? esc(formatMoney(c.valueCents)) : ''}"></div>
-        <div><div class="label">Kanban ${CRM.ui.infoHTML('A aba do topo da tela em que este cliente fica. Crie abas na pasta com "+" no canto superior direito.')}</div>
-          <select class="select" name="kanban" ${tabs.length ? '' : 'disabled'}>
-            ${tabs.length
-              ? '<option value="">Nenhuma</option>' + tabs.map((t) => `<option value="${t.id}" ${currentTab && currentTab.id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')
-              : '<option value="">Nenhuma aba criada ainda</option>'}
-          </select></div>
-      </div>
+      ${CRM.renewals.fieldsHTML({ stage: await CRM.renewals.stageText(r) })}
       <div class="error-msg" data-error></div>
-      <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-save>${editing ? 'Salvar' : 'Cadastrar'}</button></div>`);
+      <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-save>${renew ? 'Renovar' : editing ? 'Salvar' : 'Cadastrar'}</button></div>`, { wide: true });
 
     const field = (n) => el.querySelector(`[name="${n}"]`);
     const errorBox = el.querySelector('[data-error]');
     CRM.ui.attachEmoji(el.querySelector('[data-emoji]'), field('description'));
     field('value').addEventListener('blur', () => {
-      const cents = parseMoney(field('value').value);
-      if (cents != null) field('value').value = formatMoney(cents);
+      const v = parseMoney(field('value').value);
+      if (v != null) field('value').value = formatMoney(v);
     });
+    const cycleFields = await CRM.renewals.bindFields(el, cycle);
 
-    el.querySelector('[data-cancel]').addEventListener('click', openList);
+    el.querySelector('[data-cancel]').addEventListener('click', () => (renew ? CRM.ui.closeModal() : openList()));
     el.querySelector('[data-save]').addEventListener('click', async () => {
-      const nameValue = field('name').value.trim();
-      const phoneValue = field('phone').value.replace(/\D/g, '');
-      const valueText = field('value').value.trim();
-      const cents = valueText ? parseMoney(valueText) : 0;
-      if (!nameValue) return (errorBox.textContent = 'Escreva o nome do cliente.');
-      if (cents == null) return (errorBox.textContent = 'Valor inválido. Exemplo: 150,00');
-
-      await saveFor(chatId, {
-        name: nameValue,
-        phone: phoneValue,
+      const result = await saveAll(chatId, {
+        name: field('name').value.trim(),
+        phone: field('phone').value.replace(/\D/g, ''),
         description: field('description').value.trim(),
-        valueCents: cents,
-        kanbanColumnId: field('kanban').value || null,
-      });
-      toast(editing ? 'Cadastro atualizado.' : 'Cliente cadastrado.', 'ok');
-      openList();
+        valueText: field('value').value.trim(),
+      }, cycle, r, cycleFields);
+      if (result.cancelled) return;
+      if (result.error) return (errorBox.textContent = result.error);
+      toast(result.message, 'ok');
+      if (renew) CRM.ui.closeModal();
+      else openList();
     });
+  }
+
+  // Valida e grava o cadastro + o vencimento. Usado pela janela e pelo painel da direita.
+  // Devolve { error }, { cancelled } ou { message }.
+  async function saveAll(chatId, form, cycle, r, cycleFields) {
+    if (!form.name) return { error: 'Escreva o nome do cliente.' };
+    const cents = form.valueText ? parseMoney(form.valueText) : null;
+    if (form.valueText && cents == null) return { error: 'Valor inválido. Exemplo: 150,00' };
+    const changed = !r || r.dueDate !== cycle.dueDate || r.time !== cycle.time || r.quick1Id !== cycle.quick1Id || r.quick2Id !== cycle.quick2Id;
+    if (cycle.dueDate && changed) {
+      const problem = cycleFields.validate();
+      if (problem) return { error: problem };
+    }
+    if (!cycle.dueDate && r && !confirm('Tirar o vencimento deste cliente? As mensagens de renovação dele serão apagadas.')) return { cancelled: true };
+    const existing = await forChat(chatId);
+    await saveFor(chatId, { name: form.name, phone: form.phone, description: form.description, valueCents: cents });
+    if (cycle.dueDate && changed) {
+      const saved = await CRM.renewals.saveCycle(chatId, { name: form.name, phone: form.phone }, cycle);
+      return { message: `${existing ? 'Cadastro salvo' : 'Cliente cadastrado'}: vence ${CRM.renewals.shortDate(saved.dueDate)} às ${saved.time} (aba ${CRM.renewals.monthTab(saved.dueDate)}).` };
+    }
+    if (!cycle.dueDate && r) await CRM.renewals.removeCycle(chatId);
+    return { message: existing ? 'Cadastro atualizado.' : 'Cliente cadastrado.' };
   }
 
   // Grava o cadastro da conversa (cria ou atualiza) e põe o cliente na aba do Kanban.
@@ -183,10 +207,11 @@ CRM.clients = (() => {
       updatedAt: Date.now(),
     };
     await store.updateClients((list) => list.filter((x) => x.id !== client.id).concat(client));
+    // Só mexe nas abas quando quem chamou escolheu a aba (o ciclo de renovação cuida do resto).
     const previousTabId = currentTab ? currentTab.id : null;
-    if (previousTabId !== (client.kanbanColumnId || null)) await CRM.tabs.moveChat(chatId, previousTabId, client.kanbanColumnId || null);
+    if ('kanbanColumnId' in data && previousTabId !== (client.kanbanColumnId || null)) await CRM.tabs.moveChat(chatId, previousTabId, client.kanbanColumnId || null);
     return client;
   }
 
-  return { openList, countFor, forChat, saveFor, parseMoney, formatMoney, formatPhone };
+  return { openList, openForm, countFor, forChat, saveFor, saveAll, parseMoney, formatMoney, formatPhone };
 })();

@@ -479,6 +479,43 @@ CRM.tabs = (() => {
     }));
   }
 
+  // ---------- Etapas do ciclo de renovação ----------
+  // O cliente fica em só uma destas abas por vez: ao entrar numa, sai das outras.
+  // (Outras abas que o cliente tiver, ex.: 1FORNECEDOR, não mudam.)
+  const MONTHS = DEFAULT_TABS.slice(3).map(([name]) => name);
+  const keysOf = (name) => {
+    const def = DEFAULT_TABS.find(([n, aliases]) => [n, ...aliases].some((x) => plain(x) === plain(name)));
+    return def ? [def[0], ...def[1]].map(plain) : [plain(name)];
+  };
+  const STAGE_KEYS = new Set(DEFAULT_TABS.flatMap(([n, aliases]) => [n, ...aliases].map(plain)));
+
+  async function placeInStage(chatId, stageName) {
+    let targetId = null;
+    await updateTabs((all) => {
+      const keys = keysOf(stageName);
+      let target = all.find((t) => keys.includes(plain(t.name)));
+      if (!target) {
+        target = { id: uid(), name: stageName, chatIds: [], createdAt: Date.now() };
+        all = all.concat(target);
+      }
+      targetId = target.id;
+      return all.map((t) => {
+        const ids = t.chatIds || [];
+        if (t.id === targetId) return { ...t, chatIds: [...new Set([...ids, chatId])] };
+        if (STAGE_KEYS.has(plain(t.name)) && ids.includes(chatId)) return { ...t, chatIds: ids.filter((x) => x !== chatId) };
+        return t;
+      });
+    });
+    await syncClients({ [chatId]: targetId });
+    if (selectedId) applyFilter();
+    return targetId;
+  }
+
+  async function isInStage(chatId, stageName) {
+    const keys = keysOf(stageName);
+    return (await getTabs()).some((t) => keys.includes(plain(t.name)) && (t.chatIds || []).includes(chatId));
+  }
+
   store.onChange((changes) => {
     if (changes.tabs) {
       render();
@@ -487,5 +524,5 @@ CRM.tabs = (() => {
   });
   CRM.wa.on('ready', () => selectedId && applyFilter());
 
-  return { mount, list: getTabs, tabOf, moveChat, setChatInTab };
+  return { mount, list: getTabs, tabOf, moveChat, setChatInTab, placeInStage, isInStage, MONTHS };
 })();
