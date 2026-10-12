@@ -59,6 +59,8 @@ CRM.settings = (() => {
     .st-center { display: flex; justify-content: center; margin-top: 14px; gap: 10px; }
     .st-prog { height: 7px; background: #e3e8ea; border-radius: 4px; overflow: hidden; margin-top: 8px; }
     .st-prog i { display: block; height: 100%; background: linear-gradient(90deg, #24988d, #8ad2c7); transition: width .2s; }
+    .st-or { text-align: center; color: var(--muted); font-size: 12px; margin: 10px 0 8px; }
+    .st-hint { text-align: center; font-size: 11.5px; margin-top: 6px; }
     .st-steps .btn-outline { margin-top: 2px; padding: 4px 10px; font-size: 12px; }
   `;
 
@@ -110,6 +112,9 @@ CRM.settings = (() => {
           <span>Clique aqui ou arraste o arquivo (.json)</span>
           <input type="file" accept=".json,application/json,text/plain" hidden data-file>
         </label>
+        <div class="st-or">ou</div>
+        <div class="st-center" style="margin-top:0"><button class="btn-outline" data-scan>${icon('search', 15, 2)} Procurar respostas rápidas de outra ferramenta neste WhatsApp</button></div>
+        <div class="muted st-hint">Procura nos dados que outras extensões guardam aqui no navegador, sem precisar de arquivo. Nada sai do seu computador.</div>
         <div data-result></div>
       </div>
       ${footHTML()}`;
@@ -128,6 +133,7 @@ CRM.settings = (() => {
     });
     main.onclick = (e) => {
       if (e.target.closest('[data-back]')) drawGeneral();
+      if (e.target.closest('[data-scan]')) scan();
     };
   }
 
@@ -210,7 +216,60 @@ CRM.settings = (() => {
   }
 
   // Comando que salva os dados da outra ferramenta num arquivo (roda no Console, no contexto dela).
-  const EXPORT_CMD = "chrome.storage.local.get(null,d=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));a.download='dados-abertos.json';a.click()})";
+  const EXPORT_CMD = "if(!window.chrome||!chrome.storage){alert('Escolha o nome da outra ferramenta na caixinha top e cole de novo.')}else chrome.storage.local.get(null,d=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));a.download='dados-abertos.json';document.body.appendChild(a);a.click();a.remove();alert('Pronto! O arquivo dados-abertos.json foi salvo na pasta Downloads.')})";
+
+  // Passo a passo para salvar os dados guardados dentro da outra extensão num arquivo.
+  function exportSteps() {
+    return `<ol class="st-steps">
+        <li>Deixe o WhatsApp Web aberto, com a outra ferramenta funcionando nele.</li>
+        <li>Aperte <b>F12</b> (ou <b>Ctrl+Shift+J</b>). Abre um painel; clique na aba <b>Console</b>.</li>
+        <li>No alto do Console, à esquerda, tem uma caixinha escrita <b>top</b> com uma setinha. Clique nela: aparece uma lista.
+          Escolha o <b>nome da outra ferramenta</b> (não escolha "CRM WhatsApp", que é esta).</li>
+        <li>Clique na linha de baixo do Console (onde tem o sinal <b>&gt;</b>) e cole o comando com <b>Ctrl+V</b>:
+          <code class="st-code">${esc(EXPORT_CMD)}</code>
+          <button class="btn-outline" data-copycmd>${icon('copy', 14)} Copiar comando</button></li>
+        <li>Se aparecer um aviso amarelo dizendo para digitar <b>allow pasting</b>, digite exatamente isso, aperte Enter e cole o comando de novo.</li>
+        <li>Aperte <b>Enter</b>. Aparece "Pronto!" e o arquivo <b>dados-abertos.json</b> vai para a pasta <b>Downloads</b>.</li>
+        <li>Volte aqui e importe esse arquivo em <b>Escolher o arquivo de backup</b>.</li>
+      </ol>`;
+  }
+
+  function bindCopyCmd(box) {
+    const b = box.querySelector('[data-copycmd]');
+    if (!b) return;
+    b.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(EXPORT_CMD);
+        notice('Comando copiado');
+      } catch (_) {
+        toast('Não consegui copiar. Selecione o comando com o mouse e copie (Ctrl+C).', 'err');
+      }
+    };
+  }
+
+  // Procura dados de outra ferramenta guardados no próprio site do WhatsApp (sem arquivo).
+  async function scan() {
+    result().innerHTML = '<div class="st-box">Procurando…</div>';
+    let found;
+    try {
+      found = await CRM.backup.scanBrowser((name) => (result().innerHTML = `<div class="st-box">Procurando… <span class="muted">(${esc(name)})</span></div>`));
+    } catch (err) {
+      return showError('Não consegui procurar: ' + err.message);
+    }
+    current = { name: 'dados deste navegador', size: 0, tree: found.data };
+    // Partes trancadas guardadas no site: tenta com o número do WhatsApp.
+    const ls = found.data.localStorage;
+    if (ls) {
+      try {
+        const me = await CRM.wa.me();
+        const opened = me && me.user ? await CRM.backup.unlockAll(ls, [me.user, '+' + me.user, me.id]) : null;
+        if (opened) found.data.localStorage = opened.data;
+      } catch (_) {
+        // segue com o que está aberto
+      }
+    }
+    showForeign(found.data, 'dados deste navegador', false, { scan: found.sources });
+  }
 
   // Backup de outra ferramenta, trancado.
   async function showLocked(p, name) {
@@ -237,15 +296,10 @@ CRM.settings = (() => {
         <div style="margin-top:10px"><b>1) Tem a senha/chave desse backup?</b> Coloque aqui:</div>
         <div class="st-line"><input class="input" type="password" data-pass placeholder="Senha ou chave do backup"><button class="btn" data-try>Tentar abrir</button></div>
         <div class="error-msg" data-perr></div>
-        <div style="margin-top:12px"><b>2) Sem senha:</b> salve os dados da outra ferramenta num arquivo e importe aqui.</div>
-        <ol class="st-steps">
-          <li>Aqui no WhatsApp Web, aperte <b>F12</b> e clique na aba <b>Console</b>.</li>
-          <li>Em cima das mensagens do Console tem uma caixinha escrita <b>top</b>. Clique nela e escolha o <b>nome da outra ferramenta</b>.</li>
-          <li>Cole este comando e aperte <b>Enter</b> (se o Chrome pedir, digite <b>allow pasting</b> antes e aperte Enter):
-            <code class="st-code">${esc(EXPORT_CMD)}</code>
-            <button class="btn-outline" data-copycmd>${icon('copy', 14)} Copiar comando</button></li>
-          <li>Vai baixar o arquivo <b>dados-abertos.json</b>. Importe ele aqui em cima, em <b>Escolher o arquivo de backup</b>.</li>
-        </ol>
+        <div style="margin-top:12px"><b>2) Sem senha:</b> pegue os dados direto de onde a outra ferramenta guarda (antes de serem trancados).</div>
+        <div style="margin-top:6px">a) Primeiro, clique em <b>Procurar respostas rápidas de outra ferramenta neste WhatsApp</b>, lá em cima. Se achar, é só importar.</div>
+        <div style="margin-top:6px">b) Se não achar, salve os dados da outra ferramenta num arquivo:</div>
+        ${exportSteps()}
         <div style="margin-top:12px"><b>3) Me mande a estrutura</b> deste arquivo para eu conferir o formato (vai só o nome e o tamanho de cada parte, sem mensagens nem números):</div>
         <div class="st-center">${structureButton()}</div>
       </div>`;
@@ -261,19 +315,13 @@ CRM.settings = (() => {
     };
     box.querySelector('[data-try]').onclick = tryIt;
     pass.addEventListener('keydown', (e) => e.key === 'Enter' && tryIt());
-    box.querySelector('[data-copycmd]').onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(EXPORT_CMD);
-        notice('Comando copiado');
-      } catch (_) {
-        toast('Não consegui copiar. Selecione o comando com o mouse e copie (Ctrl+C).', 'err');
-      }
-    };
+    bindCopyCmd(box);
     bindStructure(box);
   }
 
   // Dados abertos de outra ferramenta: mostra o que foi encontrado antes de importar.
-  function showForeign(data, name, unlocked) {
+  // opts.scan: lista do que foi achado no navegador (quando veio do botão Procurar).
+  function showForeign(data, name, unlocked, opts = {}) {
     const m = CRM.backup.mapForeign(data);
     const rows = CRM.backup.summaryForeign(m);
     const total = rows.reduce((s, r) => s + r.count, 0);
@@ -283,6 +331,20 @@ CRM.settings = (() => {
     if (m.skipped.length) notes.push(`${m.skipped.length} ação(ões) não puderam ser trazidas (${esc([...new Set(m.skipped)].join(', '))}).`);
     if (data && typeof data === 'object' && Object.values(data).some((v) => typeof v === 'string' ? v.startsWith('U2FsdGVkX1') : CRM.backup.isRef(v) && v.head.startsWith('U2FsdGVkX1'))) {
       notes.push('Parte desses dados também está trancada (criptografada) e foi ignorada.');
+    }
+    if (!total && opts.scan) {
+      const list = opts.scan.filter((x) => x.name !== 'localStorage');
+      result().innerHTML = `<div class="st-box warn"><h4>${icon('info', 15, 2)} Não achei as respostas rápidas aqui no navegador</h4>
+        ${list.length ? `Bancos de outras extensões encontrados: ${list.map((x) => `<b>${esc(x.name)}</b> (${x.count} registros)`).join(', ')}, mas sem respostas rápidas que eu reconheça.`
+          : 'A outra ferramenta não guarda os dados no site do WhatsApp — ela guarda dentro da própria extensão.'}
+        ${notes.length ? `<div style="margin-top:6px">${notes.join('<br>')}</div>` : ''}
+        <div style="margin-top:10px"><b>Então salve os dados da outra ferramenta num arquivo:</b></div>
+        ${exportSteps()}
+        <div style="margin-top:10px">Se você acha que os dados estão aqui e eu não reconheci, copie a estrutura e me mande (sem mensagens nem números):</div>
+        <div class="st-center">${structureButton()}</div></div>`;
+      bindCopyCmd(result());
+      bindStructure(result());
+      return;
     }
     if (!total) {
       result().innerHTML = `<div class="st-box warn"><h4>${icon('info', 15, 2)} ${unlocked ? 'Backup aberto, mas' : 'Arquivo lido, mas'} não reconheci os dados</h4>
@@ -295,7 +357,7 @@ CRM.settings = (() => {
       return;
     }
     result().innerHTML = `<div class="st-box ok">
-        <h4>${icon('checkCircle', 15)} ${unlocked ? 'Backup aberto!' : 'Dados reconhecidos'} Veja o que encontrei:</h4>
+        <h4>${icon('checkCircle', 15)} ${unlocked ? 'Backup aberto!' : opts.scan ? 'Achei dados de outra ferramenta neste navegador!' : 'Dados reconhecidos'} Veja o que encontrei:</h4>
         <table class="st-table">${rows.filter((r) => r.count || r.key !== 'media').map((r) => `<tr><td>${esc(r.label)}${r.sample.length ? `<div class="sample">${r.sample.map(esc).join(' · ')}${r.count > r.sample.length ? ' …' : ''}</div>` : ''}</td><td class="n">${r.count}</td></tr>`).join('')}</table>
         ${notes.length ? `<div style="margin-top:8px">${notes.join('<br>')}</div>` : ''}
         <div style="margin-top:8px" class="muted">Vai somar ao que você já tem. Respostas iguais (mesmo título e mesmo conteúdo) e categorias/abas com o mesmo nome não são repetidas.</div>

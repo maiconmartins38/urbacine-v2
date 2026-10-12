@@ -27,7 +27,8 @@ CRM.backup = (() => {
   const BIG = 100 * 1024; // textos maiores que isso ficam no arquivo até a hora de usar
 
   const isRef = (v) => !!(v && typeof v === 'object' && v.__ref === true);
-  const sizeOf = (v) => (isRef(v) ? v.end - v.start : typeof v === 'string' ? v.length : JSON.stringify(v === undefined ? null : v).length);
+  const isBlob = (v) => v instanceof Blob; // arquivos guardados direto no navegador (IndexedDB)
+  const sizeOf = (v) => (isRef(v) ? v.end - v.start : isBlob(v) ? v.size : typeof v === 'string' ? v.length : JSON.stringify(v === undefined ? null : v).length);
 
   // ---------- Leitor de JSON em pedaços ----------
   const isLit = (c) => (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 43 || c === 45 || c === 46;
@@ -375,7 +376,9 @@ CRM.backup = (() => {
     const mask = (k) => (/\d{6,}|@/.test(k) ? '‹número/id›' : k);
     const kb = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' letras');
     if (lines.length > 400) return lines;
-    if (isRef(v) || typeof v === 'string') {
+    if (isBlob(v)) {
+      lines.push(`${pad}${name}: arquivo (${kb(v.size)}${v.type ? ', ' + v.type : ''})`);
+    } else if (isRef(v) || typeof v === 'string') {
       lines.push(`${pad}${name}: texto (${kb(sizeOf(v))})${isLocked(v) ? ' TRANCADO' : ''}${(isRef(v) ? v.head : v).startsWith('data:') ? ' [arquivo data:]' : ''}`);
     } else if (Array.isArray(v)) {
       lines.push(`${pad}${name}: lista com ${v.length} itens`);
@@ -504,6 +507,10 @@ CRM.backup = (() => {
   // Arquivo dentro do item: data:... ou base64 puro num campo de arquivo.
   function findMedia(x, type) {
     for (const [k, v] of Object.entries(x)) {
+      if (isBlob(v) && v.size > 200) {
+        const m = asText(pick(x, F.mime));
+        return { src: v, raw: false, mime: v.type || (m.includes('/') ? m : sniffMime('', type)) };
+      }
       const h = headOf(v);
       if (h.startsWith('data:')) return { src: v, raw: false, mime: h.slice(5, h.indexOf(';')) || sniffMime(h, type) };
       if (F.media.includes(norm(k)) && sizeOf(v) > 200 && /^[A-Za-z0-9+/=\s]+$/.test(h.slice(0, 200))) {
@@ -574,7 +581,7 @@ CRM.backup = (() => {
     const out = { quickReplies: [], quickCategories: [], tabs: [], media: {}, mediaBytes: 0, skipped: [], linkedMedia: 0 };
     const catByRef = new Map();
     const seen = new Set();
-    const isObj = (o) => o && typeof o === 'object' && !Array.isArray(o) && !isRef(o);
+    const isObj = (o) => o && typeof o === 'object' && !Array.isArray(o) && !isRef(o) && !isBlob(o);
 
     const looksQuick = (o) => isObj(o) && pick(o, F.title) !== undefined &&
       (typeof pick(o, F.content) === 'string' || Array.isArray(pick(o, F.actions)) || !!findMedia(o, guessType(o) || 'image'));
@@ -659,8 +666,12 @@ CRM.backup = (() => {
 
   // Grava um arquivo importado (lê do backup só agora). Áudio que não é OGG vira mensagem de voz.
   async function saveMedia(id, m) {
-    const text = isRef(m.src) ? await resolveRef(m.src) : m.src;
-    let dataUrl = m.raw ? `data:${m.mime};base64,${text.replace(/\s/g, '')}` : text;
+    let dataUrl;
+    if (isBlob(m.src)) dataUrl = await CRM.util.blobToDataURL(m.src.type ? m.src : new Blob([m.src], { type: m.mime }));
+    else {
+      const text = isRef(m.src) ? await resolveRef(m.src) : m.src;
+      dataUrl = m.raw ? `data:${m.mime};base64,${text.replace(/\s/g, '')}` : text;
+    }
     let mime = m.mime;
     let name = m.name;
     if (m.type === 'audio' && !/ogg/i.test(mime)) {
@@ -736,7 +747,99 @@ CRM.backup = (() => {
     return { added: fresh.length, media: ids.length - failed.size, failedMedia: failed.size };
   }
 
+  // ---------- Procurar dados de outra ferramenta neste navegador ----------
+  // Extensões que funcionam dentro do WhatsApp Web às vezes guardam os dados no próprio site
+  // (localStorage e IndexedDB de web.whatsapp.com), que esta extensão também consegue ler.
+  // Os bancos do próprio WhatsApp ficam de fora. Nada sai do computador.
+  const WA_DBS = /^(model-storage|signal-storage|wawc|wawc_db_enc|lru-media-storage-idb|jobs-storage|offd-storage|logs|fts-storage.*|spellcheck-storage|keyval-store|workbox-.*|wa-.*-storage)$/i;
+  const MAX_RECORDS = 20000; // por tabela
+
+  // Arquivos binários viram Blob (o resto continua igual).
+  function toPlain(v, depth = 0) {
+    if (v instanceof ArrayBuffer) return new Blob([v]);
+    if (ArrayBuffer.isView(v)) return new Blob([v.buffer.slice(v.byteOffset, v.byteOffset + v.byteLength)]);
+    if (v instanceof Date) return v.toISOString();
+    if (depth > 12 || !v || typeof v !== 'object' || isBlob(v)) return v;
+    if (Array.isArray(v)) return v.map((x) => toPlain(x, depth + 1));
+    const out = {};
+    for (const k of Object.keys(v)) out[k] = toPlain(v[k], depth + 1);
+    return out;
+  }
+
+  const req = (r) => new Promise((ok, fail) => {
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => fail(r.error);
+  });
+
+  async function readDatabase(name) {
+    const db = await new Promise((ok, fail) => {
+      const r = indexedDB.open(name);
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => fail(r.error);
+      r.onblocked = () => fail(new Error('banco ocupado'));
+      r.onupgradeneeded = () => {
+        // o banco não existia: não cria nada
+        r.transaction.abort();
+      };
+    });
+    const tables = {};
+    let count = 0;
+    try {
+      for (const store of db.objectStoreNames) {
+        const tx = db.transaction(store, 'readonly');
+        const rows = await req(tx.objectStore(store).getAll(undefined, MAX_RECORDS));
+        tables[store] = toPlain(rows);
+        count += rows.length;
+      }
+    } finally {
+      db.close();
+    }
+    return { tables, count };
+  }
+
+  // Devolve { data, sources: [{ where, name, count }] } com tudo o que não é do WhatsApp.
+  async function scanBrowser(onStep) {
+    const data = {};
+    const sources = [];
+    const ls = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const raw = localStorage.getItem(k);
+      if (!raw || raw.length < 20) continue;
+      let v = raw;
+      try {
+        v = JSON.parse(raw);
+      } catch (_) {
+        // texto comum
+      }
+      ls[k] = v;
+    }
+    if (Object.keys(ls).length) {
+      data.localStorage = ls;
+      sources.push({ where: 'Armazenamento do site', name: 'localStorage', count: Object.keys(ls).length });
+    }
+    let names = [];
+    try {
+      names = (await indexedDB.databases()).map((d) => d.name).filter((n) => n && !WA_DBS.test(n));
+    } catch (_) {
+      // navegador sem a lista de bancos
+    }
+    data.indexedDB = {};
+    for (const name of names) {
+      if (onStep) onStep(name);
+      try {
+        const { tables, count } = await readDatabase(name);
+        data.indexedDB[name] = tables;
+        sources.push({ where: 'Banco do site', name, count });
+      } catch (err) {
+        sources.push({ where: 'Banco do site', name, count: 0, error: err.message });
+      }
+    }
+    return { data, sources };
+  }
+
   return {
+    scanBrowser,
     inspect, parseText, parseBlob, resolveRef, decrypt, unlockAll, describe, isRef,
     summaryCRM, importCRM, mapForeign, summaryForeign, importForeign, LABELS, KEYS, md5,
   };

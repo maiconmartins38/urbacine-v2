@@ -42,8 +42,12 @@ No próprio Chrome (`chrome.storage.local`), só neste computador e neste perfil
   anotações, agendamentos, renovações e arquivos). Dá para somar ao que já existe ou substituir.
 - **Backup de outra ferramenta**: se as partes do arquivo estiverem criptografadas (começam com
   `U2FsdGVkX1`), só abre com a senha/chave de quem gerou. A extensão tenta sozinha com o número
-  do WhatsApp e aceita uma senha digitada. Sem senha, a própria tela mostra como salvar os dados
-  abertos da outra ferramenta num arquivo (`dados-abertos.json`) para importar.
+  do WhatsApp e aceita uma senha digitada. Sem senha, dá para pegar os dados de onde a outra
+  ferramenta guarda, antes de serem trancados:
+  - **Procurar respostas rápidas de outra ferramenta neste WhatsApp**: lê o que outras extensões
+    guardam no próprio site (localStorage e IndexedDB), sem arquivo. Os bancos do WhatsApp ficam de fora.
+  - Se ela guardar dentro da própria extensão, a tela mostra o passo a passo do Console (F12) para
+    salvar esses dados num arquivo (`dados-abertos.json`) e importar.
 - Dados abertos de outra ferramenta: a extensão procura respostas rápidas (com imagens, áudios
   e vídeos que estejam dentro do arquivo), categorias e abas e mostra o que achou antes de
   importar. Não repete respostas iguais.
