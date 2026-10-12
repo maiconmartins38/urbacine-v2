@@ -12,9 +12,13 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 
 ## Atualizar para uma versão nova
 
-1. Substitua os arquivos da mesma pasta pelos do `.zip` novo.
-2. Em `chrome://extensions`, clique no botão **Recarregar** (↻) da extensão.
-3. Recarregue o WhatsApp Web (F5).
+1. Em `chrome://extensions`, no cartão **CRM WhatsApp**, clique em **Detalhes** e veja em
+   **Origem** (ou "Carregado de") qual pasta o Chrome está usando.
+2. Descompacte o `.zip` novo. Ele traz uma pasta `crm-whatsapp`: copie **o que está dentro dela**
+   para a pasta do passo 1, substituindo os arquivos.
+3. Volte em `chrome://extensions` e clique no botão **Recarregar** (↻) da extensão.
+4. Recarregue o WhatsApp Web (F5). Confira a versão no aviso "CRM WhatsApp ativo ✓ (versão …)"
+   e no fim do menu da esquerda.
 
 **Nunca clique em "Remover"**: o Chrome apaga junto todos os agendamentos e anotações.
 
