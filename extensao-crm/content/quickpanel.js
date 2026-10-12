@@ -11,6 +11,9 @@ CRM.quickPanel = (() => {
   const collapsed = new Set();
   let popup = null;
   let editor = null; // editor de ações aberto (painel ou janela "Editar e enviar")
+  let dragging = false; // arrastando uma resposta na lista
+  let redrawAfterDrag = false;
+  let droppedAt = 0; // ignora o clique que vem logo depois de soltar
 
   const CSS = `
     .qp-top { display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; }
@@ -76,6 +79,18 @@ CRM.quickPanel = (() => {
     .qp-center { text-align: center; }
     .qp-tip { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--teal); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 3; }
     .qp-add:hover .qp-tip, .qp-back:hover .qp-tip { opacity: 1; }
+    .qp-item { user-select: none; cursor: grab; }
+    .qp-item .qp-ib { cursor: pointer; }
+    .qp-item.qp-drag-src { background: rgba(36, 152, 141, .28) !important; }
+    .qp-item.qp-drag-src > * { opacity: .55; }
+    .qp-ghost { position: fixed; z-index: 20; pointer-events: none; background: #fff !important; opacity: .9; border-radius: 7px;
+      box-shadow: 0 6px 18px rgba(11, 20, 26, .25); margin: 0 !important; }
+    .qp-dragging, .qp-dragging * { cursor: grabbing !important; }
+    .qp-group.qp-drop-target { outline: 2px dashed var(--teal); outline-offset: 1px; }
+    .qp-drop-hint { font-size: 11.5px; color: var(--muted); padding: 6px 8px 8px; text-align: center; }
+    .qp-group:has(.qp-item) .qp-drop-hint { display: none; }
+    .qp-group.qp-only-drag { display: none; border: 1.5px dashed #c5ccd0; }
+    .qp-dragging .qp-group.qp-only-drag { display: block; }
     .qp-timer { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: 11.5px; color: #3b4a54; margin: 2px 0 6px; }
     .qp-timer input { width: 46px; height: 26px; border: 1px solid var(--line); border-radius: 6px; text-align: center; font: inherit; font-size: 12px; padding: 0 2px; }
     .qp-timer input:focus { outline: none; border-color: var(--teal); }
@@ -154,7 +169,8 @@ CRM.quickPanel = (() => {
 
   function onDataChange() {
     if (!root) return;
-    if (view.name === 'list') drawGroups();
+    if (view.name === 'list' && dragging) redrawAfterDrag = true;
+    else if (view.name === 'list') drawGroups();
     if (view.name === 'cats') draw();
   }
 
@@ -295,13 +311,17 @@ CRM.quickPanel = (() => {
     } else {
       const known = new Set(cats.map((c) => c.id));
       const loose = shown.filter((q) => !q.categoryId || !known.has(q.categoryId));
+      // Sem pesquisa nem filtro, categorias vazias também aparecem, para receber respostas arrastadas.
+      const showEmpty = !filter.q.trim() && !filter.type && filter.mode === 'all';
       if (!filter.categoryId && loose.length) html += groupHTML(null, loose);
       if (filter.mode !== 'nocat') {
         cats.filter((c) => !filter.categoryId || c.id === filter.categoryId).forEach((c) => {
           const items = shown.filter((q) => q.categoryId === c.id);
-          if (items.length) html += groupHTML(c, items);
+          if (items.length || (showEmpty && !filter.categoryId)) html += groupHTML(c, items);
         });
       }
+      // "Sem categoria" vazio só aparece enquanto arrasta (para tirar a resposta da categoria).
+      if (showEmpty && !filter.categoryId && !loose.length && html) html += groupHTML(null, [], 'qp-only-drag');
     }
     box.innerHTML = html || `<div class="qp-empty"><div class="empty-icon">${icon('bolt', 22, 2)}</div><h4>Nenhuma resposta rápida encontrada</h4>
       Não há respostas rápidas disponíveis com base no filtro de busca aplicado<br><button class="qp-addact filled" data-clearall>Limpar Busca</button></div>`;
@@ -310,18 +330,135 @@ CRM.quickPanel = (() => {
       Object.assign(filter, { q: '', mode: 'all', type: null, categoryId: null });
       drawList();
     };
-    box.onclick = (e) => onListClick(e, all);
+    box.onclick = (e) => {
+      if (Date.now() - droppedAt < 300) return;
+      onListClick(e, all);
+    };
+    box.onpointerdown = (e) => onPointerDown(e, box);
   }
 
-  function groupHTML(cat, items) {
+  function groupHTML(cat, items, extraClass = '') {
     const key = cat ? cat.id : '_none';
     const open = !collapsed.has(key);
     const style = cat ? `style="border-color:${rgba(cat.color, 0.55)};background:${rgba(cat.color, 0.13)}"` : '';
-    return `<div class="qp-group ${cat ? 'cat' : ''}" ${style}>
+    return `<div class="qp-group ${cat ? 'cat' : ''} ${extraClass}" data-group="${key}" data-open="${open ? 1 : 0}" ${style}>
       <div class="qp-ghead" data-toggle="${key}">${cat ? `<span style="color:${esc(cat.color)};display:grid">${icon('shapes', 14)}</span>` : ''}${esc(cat ? cat.name.toUpperCase() : 'SEM CATEGORIA')}
         <span class="chev">${icon(open ? 'chevUp' : 'chevDown', 14, 2.2)}</span></div>
       ${open ? items.map(itemHTML).join('') : ''}
+      ${open ? '<div class="qp-drop-hint">Arraste uma resposta para cá</div>' : ''}
     </div>`;
+  }
+
+  // ---------- Arrastar e soltar (segura a resposta e leva para onde quiser) ----------
+  function onPointerDown(e, box) {
+    if (e.button !== 0 || filter.mode === 'top') return; // "Mais Usadas" segue a ordem de uso
+    const row = e.target.closest('.qp-item');
+    if (!row || e.target.closest('button')) return;
+    const sx = e.clientX;
+    const sy = e.clientY;
+    let d = null;
+    const move = (ev) => {
+      if (!d) {
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+        d = beginDrag(box, row, sx, sy);
+      }
+      ev.preventDefault();
+      d.x = ev.clientX;
+      d.y = ev.clientY;
+      d.ghost.style.left = d.x - d.dx + 'px';
+      d.ghost.style.top = d.y - d.dy + 'px';
+      dragOver(d);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', up, true);
+      window.removeEventListener('pointercancel', up, true);
+      if (d) endDrag(d);
+    };
+    window.addEventListener('pointermove', move, true);
+    window.addEventListener('pointerup', up, true);
+    window.addEventListener('pointercancel', up, true);
+  }
+
+  function beginDrag(box, row, sx, sy) {
+    closePopup();
+    dragging = true;
+    const r = row.getBoundingClientRect();
+    const ghost = row.cloneNode(true);
+    ghost.classList.add('qp-ghost');
+    ghost.style.width = r.width + 'px';
+    ghost.style.left = r.left + 'px';
+    ghost.style.top = r.top + 'px';
+    popLayer().appendChild(ghost);
+    row.classList.add('qp-drag-src');
+    box.classList.add('qp-dragging');
+    const d = { box, row, ghost, dx: sx - r.left, dy: sy - r.top, x: sx, y: sy, target: null, timer: null };
+    // Rola a lista sozinho quando o mouse chega perto do topo ou do fim.
+    d.timer = setInterval(() => {
+      const pr = root.getBoundingClientRect();
+      const step = d.y < pr.top + 40 ? -12 : d.y > pr.bottom - 40 ? 12 : 0;
+      if (step) {
+        root.scrollTop += step;
+        dragOver(d);
+      }
+    }, 30);
+    return d;
+  }
+
+  // Abre o espaço onde a resposta vai cair (move a própria linha na lista).
+  function dragOver(d) {
+    const el = CRM.panel.root.elementFromPoint(d.x, d.y);
+    const group = el && el.closest('.qp-group[data-group]');
+    if (d.target) d.target.classList.remove('qp-drop-target');
+    d.target = null;
+    if (!group || !d.box.contains(group)) return;
+    const item = el.closest('.qp-item');
+    if (item && item !== d.row) {
+      const r = item.getBoundingClientRect();
+      item.parentNode.insertBefore(d.row, d.y > r.top + r.height / 2 ? item.nextSibling : item);
+      return;
+    }
+    if (item) return; // em cima dela mesma
+    if (group.dataset.open === '0') {
+      // categoria fechada: a resposta vai para o fim dela
+      d.target = group;
+      group.classList.add('qp-drop-target');
+      return;
+    }
+    const head = group.querySelector('.qp-ghead');
+    if (d.row.parentNode === group && !(head && d.y < head.getBoundingClientRect().bottom)) return;
+    if (head && d.y < head.getBoundingClientRect().bottom) head.after(d.row);
+    else group.insertBefore(d.row, group.querySelector('.qp-drop-hint'));
+  }
+
+  async function endDrag(d) {
+    clearInterval(d.timer);
+    d.ghost.remove();
+    d.row.classList.remove('qp-drag-src');
+    d.box.classList.remove('qp-dragging');
+    droppedAt = Date.now();
+    const sibling = (dir) => {
+      let n = d.row[dir];
+      while (n && !(n.classList && n.classList.contains('qp-item'))) n = n[dir];
+      return n ? n.dataset.id : null;
+    };
+    const group = d.target || d.row.closest('.qp-group[data-group]');
+    if (d.target) d.target.classList.remove('qp-drop-target');
+    // Soltou fora da lista: volta para onde estava.
+    const pr = root.getBoundingClientRect();
+    const inside = d.x >= pr.left && d.x <= pr.right && d.y >= pr.top && d.y <= pr.bottom;
+    try {
+      if (group && inside) {
+        const key = group.dataset.group;
+        await Q().move(d.row.dataset.id, d.target
+          ? { categoryId: key === '_none' ? null : key }
+          : { categoryId: key === '_none' ? null : key, beforeId: sibling('nextElementSibling'), afterId: sibling('previousElementSibling') });
+      }
+    } finally {
+      dragging = false;
+      redrawAfterDrag = false;
+      drawGroups();
+    }
   }
 
   async function onListClick(e, all) {

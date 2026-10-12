@@ -61,6 +61,29 @@ CRM.quick = (() => {
     if (q) for (const a of q.actions) if (a.mediaId) await store.deleteMedia(a.mediaId);
   }
 
+  // Arrastar e soltar: muda a categoria e coloca a resposta antes de beforeId (ou depois de
+  // afterId). Sem vizinhos, vai para o fim da categoria. A ordem da lista é a ordem guardada.
+  const move = (id, { categoryId, beforeId, afterId }) =>
+    store.serialUpdate('quickReplies', [], (all) => {
+      const i = all.findIndex((q) => q.id === id);
+      if (i < 0) return all;
+      const [item] = all.splice(i, 1);
+      item.categoryId = categoryId || null;
+      let at = beforeId ? all.findIndex((q) => q.id === beforeId) : -1;
+      if (at < 0 && afterId) {
+        at = all.findIndex((q) => q.id === afterId);
+        if (at >= 0) at += 1;
+      }
+      if (at < 0) {
+        at = all.length;
+        all.forEach((q, k) => {
+          if ((q.categoryId || null) === item.categoryId) at = k + 1;
+        });
+      }
+      all.splice(at, 0, item);
+      return all;
+    });
+
   const countUse = (id) =>
     store.serialUpdate('quickReplies', [], (all) => all.map((q) => (q.id === id ? { ...q, uses: (q.uses || 0) + 1 } : q)));
 
@@ -154,7 +177,7 @@ CRM.quick = (() => {
   }
 
   return {
-    GROUPS, TYPES, list, get, save, remove, countUse, categories, saveCategory, removeCategory,
+    GROUPS, TYPES, list, get, save, remove, move, countUse, categories, saveCategory, removeCategory,
     actionSummary, summary, mainType, selectHTML, bindPreview, openQuickForm,
   };
 })();
