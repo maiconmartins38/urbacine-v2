@@ -4,10 +4,10 @@
   const { icon } = CRM.ui;
 
   const BUTTONS = [
-    { key: 'clients', icon: 'client', tip: 'Cadastro', open: () => CRM.clients.openList() },
+    { key: 'clients', icon: 'client', tip: 'Cadastro', open: () => CRM.clients.openList({ fresh: true }) },
     { key: 'renewed', icon: 'renewed', tip: 'Renovado', open: () => CRM.renewals.markRenewed() },
-    { key: 'renewals', icon: 'renew', tip: 'Mensagens de Renovação', open: () => CRM.renewals.openList() },
-    { key: 'schedules', icon: 'schedule', tip: 'Mensagens Agendadas', open: () => CRM.schedules.openList() },
+    { key: 'renewals', icon: 'renew', tip: 'Mensagens de Renovação', open: () => CRM.renewals.openList({ fresh: true }) },
+    { key: 'schedules', icon: 'schedule', tip: 'Mensagens Agendadas', open: () => CRM.schedules.openList({ fresh: true }) },
     { key: 'notes', icon: 'notes', tip: 'Anotações', open: () => CRM.notes.openList() },
   ];
 
@@ -25,7 +25,11 @@
     bar = shadow.querySelector('.bar');
     bar.querySelectorAll('[data-key]').forEach((btn) => {
       const def = BUTTONS.find((b) => b.key === btn.dataset.key);
-      btn.addEventListener('click', def.open);
+      // Confere qual conversa está aberta na hora do clique (para mostrar os dados do contato certo).
+      btn.addEventListener('click', async () => {
+        await CRM.wa.refreshActiveChat();
+        def.open();
+      });
     });
     CRM.ui.isolateEvents(barHost);
     document.body.appendChild(barHost);

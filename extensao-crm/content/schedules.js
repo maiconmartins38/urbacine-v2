@@ -269,7 +269,9 @@ CRM.schedules = (() => {
   // ---------- Tela: lista ----------
   let showAll = false;
 
-  async function openList() {
+  // fresh: aberta pelo botão da conversa → mostra só o contato aberto ("Exibir Todos" volta a desligar).
+  async function openList(opts) {
+    if (opts && opts.fresh) showAll = false;
     const chat = CRM.wa.state.activeChat;
     if (!CRM.wa.state.ready) {
       modal(`<div class="modal-head"><h2 class="modal-title">Mensagens Agendadas</h2></div>

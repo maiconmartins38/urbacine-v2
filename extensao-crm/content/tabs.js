@@ -16,6 +16,44 @@ CRM.tabs = (() => {
   const getTabs = () => store.get('tabs', []);
   const updateTabs = (fn) => store.serialUpdate('tabs', [], fn);
 
+  // ---------- Abas padrão (fazem parte da rotina das renovações) ----------
+  // [nome, outros nomes que contam como a mesma aba]
+  const DEFAULT_TABS = [
+    ['ENTROU EM CONTATO', ['ENTRARAM EM CONTATO']], ['REMARKTING', ['REMARKETING']], ['NUTRIR', []],
+    ['JANEIRO', []], ['FEVEREIRO', []], ['MARÇO', []], ['ABRIL', []], ['MAIO', []], ['JUNHO', []],
+    ['JULHO', []], ['AGOSTO', []], ['SETEMBRO', []], ['OUTUBRO', []], ['NOVEMBRO', []], ['DEZEMBRO', []],
+  ];
+  const DEFAULTS_VERSION = 1;
+  const plain = (name) => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+
+  // Cria as abas padrão que faltam e põe todas em ordem no começo da barra (as outras abas
+  // vêm depois, na ordem de sempre). Abas que já existem com o mesmo nome (mesmo em letra
+  // minúscula ou sem acento) são aproveitadas, com os contatos delas, e ficam em caixa alta.
+  function applyDefaultTabs() {
+    return updateTabs((list) => {
+      const used = new Set();
+      const defaults = DEFAULT_TABS.map(([name, aliases]) => {
+        const keys = [name, ...aliases].map(plain);
+        const found = list.find((t) => !used.has(t.id) && keys.includes(plain(t.name)));
+        if (found) {
+          used.add(found.id);
+          return { ...found, name: plain(found.name) === plain(name) ? name : found.name.toUpperCase() };
+        }
+        return { id: uid(), name, chatIds: [], createdAt: Date.now() };
+      });
+      return defaults.concat(list.filter((t) => !used.has(t.id)));
+    });
+  }
+
+  // Uma vez só (na primeira vez que esta versão abre). Depois, se apagar uma aba padrão, ela não volta
+  // sozinha: dá para recriar no menu ☰ → "Recriar abas padrão".
+  async function ensureDefaultTabs() {
+    const settings = await store.getSettings();
+    if ((settings.defaultTabsVersion || 0) >= DEFAULTS_VERSION) return;
+    await applyDefaultTabs();
+    await store.saveSettings({ ...(await store.getSettings()), defaultTabsVersion: DEFAULTS_VERSION });
+  }
+
   // ---------- Cache de nomes/telefones dos contatos (para exportar e escolher) ----------
   async function refreshContacts() {
     const chats = await CRM.wa.listChats();
@@ -82,6 +120,7 @@ CRM.tabs = (() => {
       if (popover && !path.includes(popover) && !path.some((n) => n.dataset && n.dataset.create !== undefined)) closePopover();
     }, true);
     render();
+    ensureDefaultTabs();
   }
 
   async function render() {
@@ -202,6 +241,7 @@ CRM.tabs = (() => {
     const el = showDropdown(`<div class="dropdown-title">${icon('menu', 20)}<span>Abas</span></div>
       ${tabs.map((t) => `<button class="dropdown-item" data-go="${t.id}"><span>${esc(t.name)}</span><span class="tab-count">${(t.chatIds || []).length}</span></button>`).join('')}
       <button class="dropdown-item" data-new>+ Criar uma nova aba</button>
+      <button class="dropdown-item" data-defaults>↺ Recriar abas padrão</button>
       <button class="dropdown-item" data-layout>⚙ Ajustar posição da barra</button>`, anchor, true);
     el.addEventListener('click', (e) => {
       const go = e.target.closest('[data-go]');
@@ -212,6 +252,10 @@ CRM.tabs = (() => {
         });
       } else if (e.target.closest('[data-new]')) {
         openNamePopover();
+      } else if (e.target.closest('[data-defaults]')) {
+        closeDropdown();
+        if (!confirm('Recriar as abas padrão que faltam (ENTROU EM CONTATO, REMARKTING, NUTRIR e os meses) e colocar elas em ordem no começo da barra? Nenhuma aba é apagada.')) return;
+        applyDefaultTabs().then(() => notice('Abas padrão em ordem'));
       } else if (e.target.closest('[data-layout]')) {
         closeDropdown();
         openLayoutModal();
