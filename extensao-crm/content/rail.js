@@ -1,5 +1,5 @@
-// Menu lateral esquerdo (como no vídeo). Por enquanto só os botões e os nomes ao
-// passar o mouse; cada função será ligada numa próxima etapa.
+// Menu lateral esquerdo (como no vídeo). A engrenagem abre as Configurações; os
+// outros botões ainda só mostram o nome e serão ligados nas próximas etapas.
 CRM.rail = (() => {
   const W = CRM.layout.LEFT;
   const TOP = CRM.layout.HEIGHT;
@@ -51,7 +51,7 @@ CRM.rail = (() => {
     { key: 'panel', icon: 'panel', tip: 'Painel' },
     { key: 'preferences', icon: 'sliders', tip: 'Preferências' },
     { key: 'notifications', icon: 'bell', tip: 'Notificações' },
-    { key: 'settings', icon: 'gear', tip: 'Configurações' },
+    { key: 'settings', icon: 'gear', tip: 'Configurações', open: () => CRM.settings.open() },
   ];
 
   const CSS = `
@@ -91,6 +91,7 @@ CRM.rail = (() => {
       const btn = e.target.closest('[data-rail]');
       if (!btn) return;
       const item = TOP_ITEMS.concat(BOTTOM_ITEMS).find((i) => i.key === btn.dataset.rail);
+      if (item.open) return item.open();
       CRM.ui.toast(`"${item.tip}" ainda não tem função — vem numa próxima etapa.`);
     });
     CRM.ui.isolateEvents(host);

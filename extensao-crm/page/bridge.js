@@ -36,6 +36,11 @@
 
   const handlers = {
     status: () => ({ ready: isReady() }),
+    // Número do WhatsApp conectado (usado para tentar abrir backups trancados com ele).
+    me: () => {
+      const id = window.WPP.conn && window.WPP.conn.getMyUserId && window.WPP.conn.getMyUserId();
+      return id ? { user: id.user || '', id: id._serialized || String(id) } : null;
+    },
     activeChat: () => chatInfo(window.WPP.chat.getActiveChat()),
     sendText: async ({ chatId, text, options }) =>
       confirmSent(await window.WPP.chat.sendTextMessage(chatId, text, { createChat: true, ...(options || {}) })),

@@ -363,12 +363,13 @@ CRM.schedules = (() => {
   }
 
   // ---------- Tela: criar / editar ----------
-  async function openForm(existing) {
+  // preset: valores iniciais de um agendamento novo (ex.: vindo do menu ••• de uma resposta rápida).
+  async function openForm(existing, preset) {
     const chat = CRM.wa.state.activeChat;
     if (!existing && !chat) return toast('Abra uma conversa para agendar uma mensagem.', 'err');
 
     const editing = !!existing;
-    const s = existing || {};
+    const s = existing || preset || {};
     const state = {
       type: s.type || 'text',
       media: null, // { dataUrl, name, mime } novo arquivo escolhido
@@ -724,5 +725,8 @@ CRM.schedules = (() => {
     });
   }
 
-  return { openList, openReport, openSettings, tick, pendingCount, unseenReports, nextOccurrence, STATUS_LABEL };
+  // "Criar Agendamento" no menu ••• da resposta rápida: já vem com ela selecionada.
+  const newFromQuick = (q) => openForm(null, { type: 'quick', quickReplyId: q.id, title: q.title || '' });
+
+  return { openList, openReport, openSettings, newFromQuick, tick, pendingCount, unseenReports, nextOccurrence, STATUS_LABEL };
 })();

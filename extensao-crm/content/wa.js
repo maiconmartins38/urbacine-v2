@@ -94,5 +94,6 @@ CRM.wa = (() => {
     saveContact: (id, name) => call('saveContact', { id, name }, 30000),
     removeContact: (id) => call('removeContact', { id }, 30000),
     setAutoSave: (enabled) => call('setAutoSave', { enabled }, 10000),
+    me: () => call('me', {}, 10000),
   };
 })();

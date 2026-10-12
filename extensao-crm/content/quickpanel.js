@@ -10,7 +10,7 @@ CRM.quickPanel = (() => {
   const filter = { q: '', mode: 'all', type: null, categoryId: null };
   const collapsed = new Set();
   let popup = null;
-  let recorder = null; // { index, rec }
+  let editor = null; // editor de ações aberto (painel ou janela "Editar e enviar")
 
   const CSS = `
     .qp-top { display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; }
@@ -76,6 +76,17 @@ CRM.quickPanel = (() => {
     .qp-center { text-align: center; }
     .qp-tip { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--teal); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; z-index: 3; }
     .qp-add:hover .qp-tip, .qp-back:hover .qp-tip { opacity: 1; }
+    .qp-timer { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: 11.5px; color: #3b4a54; margin: 2px 0 6px; }
+    .qp-timer input { width: 46px; height: 26px; border: 1px solid var(--line); border-radius: 6px; text-align: center; font: inherit; font-size: 12px; padding: 0 2px; }
+    .qp-timer input:focus { outline: none; border-color: var(--teal); }
+    .qp-pop .pop-head { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13px; padding: 6px 8px 7px; border-bottom: 1px solid #eef0f2; margin-bottom: 3px; }
+    .qp-pop .pop-head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .es-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; margin: -4px 30px 10px 0; text-transform: uppercase; }
+    .es-head .ico { color: #54656f; display: grid; }
+    .es-card { margin: 0; max-height: calc(100vh - 220px); overflow: auto; }
+    .es-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+    .es-send { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #1fa855; color: #fff; display: grid; place-items: center; box-shadow: 0 3px 10px rgba(31,168,85,.4); }
+    .es-send:hover { filter: brightness(1.06); }
   `;
 
   // ---------- Utilidades ----------
@@ -95,13 +106,14 @@ CRM.quickPanel = (() => {
   }
 
   // Menu flutuante perto de um botão (pode sair do painel para a esquerda, como no vídeo).
-  function openPopup(anchor, html, { left = false, width } = {}) {
+  // layer: onde o menu é colocado (padrão: o painel; na janela "Editar e enviar", a própria janela).
+  function openPopup(anchor, html, { left = false, width, layer } = {}) {
     closePopup();
     popup = document.createElement('div');
     popup.className = 'qp-pop';
     if (width) popup.style.width = width + 'px';
     popup.innerHTML = html;
-    popLayer().appendChild(popup);
+    (layer || popLayer()).appendChild(popup);
     const r = anchor.getBoundingClientRect();
     const pw = popup.offsetWidth;
     const ph = popup.offsetHeight;
@@ -147,10 +159,7 @@ CRM.quickPanel = (() => {
   }
 
   function go(v) {
-    if (recorder) {
-      recorder.rec.cancel();
-      recorder = null;
-    }
+    stopRecording(editor);
     view = v;
     draw();
     root.scrollTop = 0;
@@ -263,7 +272,7 @@ CRM.quickPanel = (() => {
       <span class="qp-ico">${icon(t ? t.icon : 'text', 15)}</span>
       <span class="qp-name" title="${esc(q.title)}">${esc(q.title || Q().summary(q))}</span>
       <button class="qp-ib" data-more title="Mais opções">${icon('more', 16)}</button>
-      <button class="qp-ib" data-preview title="Ver prévia">${icon('eye2', 15)}</button>
+      <button class="qp-ib" data-preview title="Editar e enviar (sem salvar)">${icon('eye2', 15)}</button>
       <button class="qp-ib" data-send title="Enviar nesta conversa">${icon('play', 13)}</button>
     </div>`;
   }
@@ -328,84 +337,106 @@ CRM.quickPanel = (() => {
     const q = all.find((x) => x.id === row.dataset.id);
     if (!q) return;
     if (e.target.closest('[data-send]')) return send(q);
-    if (e.target.closest('[data-preview]')) return preview(q);
-    if (e.target.closest('[data-more]')) {
-      const p = openPopup(e.target.closest('[data-more]'), `
-        <button class="opt" data-m="edit">${icon('edit', 14)} Editar</button>
-        <button class="opt" data-m="dup">${icon('copy', 14)} Duplicar</button>
-        <button class="opt danger" data-m="del">${icon('trash', 14)} Excluir</button>`);
-      p.onclick = async (ev) => {
-        const m = ev.target.closest('[data-m]');
-        if (!m) return;
-        closePopup();
-        if (m.dataset.m === 'edit') go({ name: 'edit', draft: JSON.parse(JSON.stringify(q)) });
-        if (m.dataset.m === 'dup') {
-          const copy = JSON.parse(JSON.stringify(q));
-          copy.id = uid();
-          copy.title = (q.title || '') + ' (cópia)';
-          for (const a of copy.actions) {
-            if (a.mediaId) {
-              const media = await CRM.store.getMedia(a.mediaId);
-              a.mediaId = uid();
-              if (media) await CRM.store.putMedia(a.mediaId, media);
-            }
+    if (e.target.closest('[data-preview]')) return openEditSend(q);
+    if (e.target.closest('[data-more]')) openMoreMenu(e.target.closest('[data-more]'), q);
+  }
+
+  // Menu dos três pontinhos (abre à esquerda, como no vídeo).
+  function openMoreMenu(anchor, q) {
+    const t = Q().TYPES[Q().mainType(q)];
+    const p = openPopup(anchor, `
+      <div class="pop-head">${icon(t ? t.icon : 'text', 15)}<span>${esc(q.title || Q().summary(q))}</span></div>
+      <button class="opt" data-m="dup">${icon('copy', 14)} Duplicar Resposta rápida</button>
+      <button class="opt" data-m="edit">${icon('edit', 14)} Editar</button>
+      <button class="opt" data-m="schedule">${icon('schedule', 14)} Criar Agendamento</button>
+      <button class="opt" data-m="editsend">${icon('eye2', 14)} Editar e enviar</button>
+      <button class="opt danger" data-m="del">${icon('trash', 14)} Deletar</button>`, { left: true, width: 220 });
+    p.onclick = async (ev) => {
+      const m = ev.target.closest('[data-m]');
+      if (!m) return;
+      closePopup();
+      const k = m.dataset.m;
+      if (k === 'edit') go({ name: 'edit', draft: JSON.parse(JSON.stringify(q)) });
+      if (k === 'editsend') openEditSend(q);
+      if (k === 'schedule') {
+        if (!CRM.wa.state.activeChat) return toast('Abra uma conversa para agendar esta resposta rápida.', 'err');
+        CRM.schedules.newFromQuick(q);
+      }
+      if (k === 'dup') {
+        const copy = JSON.parse(JSON.stringify(q));
+        copy.id = uid();
+        copy.title = (q.title || '') + ' (cópia)';
+        for (const a of copy.actions) {
+          if (a.mediaId) {
+            const media = await CRM.store.getMedia(a.mediaId);
+            a.mediaId = uid();
+            if (media) await CRM.store.putMedia(a.mediaId, media);
           }
-          delete copy.uses;
-          await Q().save(copy);
-          notice('Resposta rápida duplicada');
         }
-        if (m.dataset.m === 'del') {
-          if (!confirm(`Excluir a resposta rápida "${q.title}"?`)) return;
-          await Q().remove(q.id);
-          notice('Resposta rápida excluída');
-        }
-      };
-    }
-  }
-
-  async function send(q) {
-    const chat = CRM.wa.state.activeChat;
-    if (!CRM.wa.state.ready || !chat) return toast('Abra uma conversa para enviar a resposta rápida.', 'err');
-    toast(`Enviando "${q.title}"…`);
-    try {
-      await CRM.quickRun.execute(q, { chatId: chat.id, chatName: chat.name || chat.pushname || '' });
-      notice('Resposta rápida enviada');
-    } catch (err) {
-      toast('Falha ao enviar: ' + err.message, 'err');
-    }
-  }
-
-  async function preview(q) {
-    const cats = await Q().categories();
-    const cat = cats.find((c) => c.id === q.categoryId);
-    const el = CRM.ui.modal(`<div class="modal-head"><h2 class="modal-title">${esc(q.title)}</h2></div>
-      <div class="muted" style="font-size:12.5px;margin:-6px 0 10px">${cat ? 'Categoria: ' + esc(cat.name) + ' · ' : ''}Usada ${q.uses || 0}x</div>
-      <div class="list">${q.actions.map((a, i) => {
-        const t = Q().TYPES[a.type];
-        return `<div class="item"><div class="item-icon">${icon(t ? t.icon : 'text', 17)}</div><div class="item-body">
-          <div class="item-title">${i + 1}. ${esc(t ? t.label : a.type)}</div>
-          <div class="item-text">${esc(a.type === 'text' ? a.text : Q().actionSummary(a))}</div><div data-media="${i}"></div></div></div>`;
-      }).join('')}</div>
-      <div class="actions"><button class="btn" data-close-prev>Fechar</button><button class="btn" data-send-prev>Enviar nesta conversa</button></div>`, { wide: true });
-    el.querySelector('[data-close-prev]').onclick = CRM.ui.closeModal;
-    el.querySelector('[data-send-prev]').onclick = () => {
-      CRM.ui.closeModal();
-      send(q);
+        delete copy.uses;
+        delete copy.createdAt;
+        await Q().save(copy);
+        notice('Resposta rápida duplicada');
+      }
+      if (k === 'del') {
+        if (!confirm(`Deletar a resposta rápida "${q.title}"?`)) return;
+        await Q().remove(q.id);
+        notice('Resposta rápida deletada');
+      }
     };
-    q.actions.forEach(async (a, i) => {
-      if (!a.mediaId) return;
-      const m = await CRM.store.getMedia(a.mediaId);
-      const box = el.querySelector(`[data-media="${i}"]`);
-      if (!m || !box) return;
-      if (a.type === 'image' || a.type === 'sticker') box.innerHTML = `<img class="thumb" src="${m.dataUrl}" alt="">`;
-      else if (a.type === 'audio') box.innerHTML = `<audio controls src="${m.dataUrl}"></audio>`;
-      else if (a.type === 'video') box.innerHTML = `<video class="thumb" controls src="${m.dataUrl}"></video>`;
-    });
+  }
+
+  function chatCtx() {
+    const chat = CRM.wa.state.activeChat;
+    if (!CRM.wa.state.ready || !chat) return null;
+    return { chatId: chat.id, chatName: chat.name || chat.pushname || '' };
+  }
+
+  // Envia na conversa aberta; a faixa "Ação da Resposta Rápida (1/N)" mostra o andamento.
+  function send(q) {
+    const ctx = chatCtx();
+    if (!ctx) return toast('Abra uma conversa para enviar a resposta rápida.', 'err');
+    CRM.quickRun.send(q, ctx);
+  }
+
+  // "Editar e enviar": muda o texto/ações só para este envio. A resposta salva fica como estava.
+  async function openEditSend(q) {
+    if (!chatCtx()) return toast('Abra uma conversa para enviar a resposta rápida.', 'err');
+    const draft = JSON.parse(JSON.stringify(q));
+    const t = Q().TYPES[Q().mainType(q)];
+    const el = CRM.ui.modal(`<style>${CSS}</style>
+      <div class="es-head"><span class="ico">${icon(t ? t.icon : 'text', 17)}</span>${esc(q.title || '')}</div>
+      <div class="qp-card es-card" data-es></div>
+      <div class="error-msg" data-err></div>
+      <div class="es-foot"><button class="es-send" data-es-send title="Enviar nesta conversa (não altera a resposta salva)">${icon('send', 20, 2)}</button></div>`,
+      { wide: true, onClose: () => stopRecording(E) });
+    const box = el.querySelector('[data-es]');
+    const E = makeEditor(box, draft, () => drawBox(), el);
+    async function drawBox() {
+      const top = box.scrollTop;
+      box.innerHTML = `<div class="qp-card-title">Editar e enviar resposta rápida ${tagsHTML()}</div>${await actionsHTML(E)}`;
+      bindEmojis(box);
+      box.scrollTop = top;
+    }
+    bindEditor(E);
+    box.onclick = (e) => actionClick(E, e);
+    el.querySelector('[data-es-send]').onclick = () => {
+      const err = el.querySelector('[data-err]');
+      if (E.rec) return (err.textContent = 'Pare a gravação antes de enviar.');
+      const problem = validateActions(draft.actions);
+      if (problem) return (err.textContent = problem);
+      const ctx = chatCtx();
+      if (!ctx) return (err.textContent = 'Abra uma conversa para enviar.');
+      CRM.ui.closeModal();
+      CRM.quickRun.send(draft, ctx);
+    };
+    await drawBox();
   }
 
   // ---------- Criar / editar ----------
   const DEFAULTS = {
-    text: { text: '' }, pix: { keyType: 'CPF', key: '', name: '', instructions: '' }, groupInvite: { link: '', text: '' },
+    text: { text: '', typing: 5, wait: 5 }, audio: { recording: 5, wait: 5 },
+    pix: { keyType: 'CPF', key: '', name: '', instructions: '' }, groupInvite: { link: '', text: '' },
     contact: { name: '', phone: '' }, linkBanner: { text: '', title: '', description: '' },
     list: { title: '', description: '', buttonText: 'Ver opções', footer: '', items: [{ title: '', description: '' }] },
     wait: { seconds: 3 }, typing: { seconds: 3 }, recording: { seconds: 3 }, tabAdd: { tabId: '' }, tabRemove: { tabId: '' },
@@ -422,10 +453,40 @@ CRM.quickPanel = (() => {
   const area = (i, k, ph, val) =>
     `<div class="textarea-wrap"><textarea class="textarea qp-ta" data-i="${i}" data-k="${k}" placeholder="${esc(ph)}">${esc(val || '')}</textarea>
       <div class="textarea-tools"><button type="button" class="icon-btn" data-emoji title="Emojis">${icon('smile', 17)}</button></div></div>`;
+  // Campo de segundos dentro de uma frase (ex.: "Aguarde para chamar a próxima ação por [5] Segundos").
+  const timer = (i, k, before, val) =>
+    `<div class="qp-timer">${before} <input type="number" min="0" max="600" step="1" data-i="${i}" data-k="${k}" value="${esc(val == null ? 0 : val)}"> Segundos</div>`;
+  const tagsHTML = () => `<span class="qp-tags">#Tags ${icon('info', 11, 2)}<span class="info-pop">Use <b>{nome}</b> nos textos para colocar o primeiro nome do contato.</span></span>`;
 
-  async function actionBody(a, i) {
+  // Um editor de ações: host = elemento onde ele é desenhado; draft = { actions: [...] };
+  // redraw() desenha de novo; layer = onde abrir os menus (padrão: o painel).
+  function makeEditor(host, draft, redraw, layer) {
+    editor = { host, draft, redraw, layer, rec: null }; // rec = { index, rec } gravação de áudio
+    return editor;
+  }
+
+  function stopRecording(E) {
+    if (E && E.rec) {
+      E.rec.rec.cancel();
+      E.rec = null;
+    }
+  }
+
+  function bindEmojis(box) {
+    box.querySelectorAll('.textarea-wrap').forEach((w) => {
+      const f = w.querySelector('textarea, input');
+      const b = w.querySelector('[data-emoji]');
+      if (f && b) CRM.ui.attachEmoji(b, f);
+    });
+  }
+
+  async function actionBody(E, a, i) {
     const t = a.type;
-    if (t === 'text') return area(i, 'text', 'Escreva a mensagem', a.text);
+    if (t === 'text') {
+      return timer(i, 'typing', 'Exibir para o cliente que a mensagem está sendo digitada por', a.typing) +
+        area(i, 'text', 'Escreva a mensagem', a.text) +
+        timer(i, 'wait', 'Aguarde para chamar a próxima ação por', a.wait);
+    }
     if (ACCEPT[t]) {
       const p = a._pending;
       const thumb = p && (t === 'image' || t === 'sticker') ? `<img class="qp-thumb" src="${p.dataUrl}" alt="">` : '';
@@ -436,14 +497,16 @@ CRM.quickPanel = (() => {
     }
     if (t === 'audio') {
       const p = a._pending;
-      const rec = recorder && recorder.index === i;
-      return `<div class="qp-media">
+      const rec = E.rec && E.rec.index === i;
+      return timer(i, 'recording', 'Exibir para o cliente que um áudio está sendo gravado por', a.recording) +
+        `<div class="qp-media">
           <button type="button" class="qp-import" data-aimport="${i}">${icon('upload', 14, 2)} Importar</button>
           <button type="button" class="qp-import ${rec ? 'rec' : ''}" data-arec="${i}">${rec ? icon('stop', 12) + ' Parar' : icon('mic', 14, 2) + ' Gravar'}</button></div>
         <input type="file" hidden data-afile="${i}" accept="audio/*">
         <span class="qp-fname">${esc(a.name || 'Nenhum áudio')}</span>
         ${p ? `<audio controls src="${p.dataUrl}"></audio>` : ''}
-        <div class="qp-hint">Chega como mensagem de voz.</div>`;
+        <div class="qp-hint">Chega como mensagem de voz.</div>` +
+        timer(i, 'wait', 'Aguarde para chamar a próxima ação por', a.wait);
     }
     if (t === 'pix') {
       const opts = [['CPF', 'CPF'], ['CNPJ', 'CNPJ'], ['PHONE', 'Telefone'], ['EMAIL', 'E-mail'], ['EVP', 'Chave aleatória']]
@@ -472,145 +535,124 @@ CRM.quickPanel = (() => {
     return `<div class="qp-hint">${esc(UTIL_NOTE[t] || '')}</div>`;
   }
 
-  async function drawEdit() {
-    const d = view.draft;
-    const cats = await Q().categories();
-    const cat = cats.find((c) => c.id === d.categoryId);
-    const bodies = await Promise.all(d.actions.map((a, i) => actionBody(a, i)));
-    root.innerHTML = `
-      <div class="qp-titlebar"><button class="qp-back" data-back>${icon('back', 18, 2.2)}<span class="qp-tip">Voltar</span></button>
-        <h3>${d.id ? 'Editar Resposta Rápida' : 'Criar Respostas Rápidas'}</h3></div>
-      <div class="label">Título</div>
-      <div class="textarea-wrap"><input class="input" data-title placeholder="Digite o título da resposta rápida" value="${esc(d.title)}" style="padding-right:34px">
-        <div class="textarea-tools" style="top:3px"><button type="button" class="icon-btn" data-emoji title="Emojis">${icon('smile', 17)}</button></div></div>
-      <div class="qp-card">
-        <div class="qp-card-title">Ação do Resposta Rapida</div>
-        <span class="qp-tags">#Tags ${icon('info', 11, 2)}<span class="info-pop">Use <b>{nome}</b> nos textos para colocar o primeiro nome do contato.</span></span>
-        ${d.actions.length ? d.actions.map((a, i) => {
+  // Lista de ações + botão "Adicionar Ação".
+  async function actionsHTML(E) {
+    const d = E.draft;
+    const bodies = await Promise.all(d.actions.map((a, i) => actionBody(E, a, i)));
+    const cards = d.actions.length
+      ? d.actions.map((a, i) => {
           const t = Q().TYPES[a.type] || { icon: 'text', label: a.type };
-          return `<div class="qp-action"><div class="qp-ahead"><span class="n">${i + 1}</span>${icon(t.icon, 14)} ${esc(t.label)}<span class="sp"></span>
+          return `<div class="qp-action"><div class="qp-ahead"><span class="n">${i + 1}</span>${icon(t.icon, 14)} ${esc(t.key === 'text' ? 'Criar Mensagem de Texto' : t.label)}<span class="sp"></span>
             <button type="button" class="qp-ib" data-up="${i}" title="Subir" ${i === 0 ? 'disabled' : ''}>${icon('arrowUp', 13, 2)}</button>
             <button type="button" class="qp-ib" data-down="${i}" title="Descer" ${i === d.actions.length - 1 ? 'disabled' : ''}>${icon('arrowDown', 13, 2)}</button>
             <button type="button" class="qp-ib" data-delact="${i}" title="Remover ação">${icon('trash', 13)}</button></div>${bodies[i]}</div>`;
-        }).join('') : `<div class="qp-empty" style="padding:14px 4px 4px"><div class="empty-icon">${icon('shapes', 22)}</div><h4 style="font-size:14px">Nenhuma ação foi atribuída</h4>
-          Adicione ações para criar e configurar modelos de envio personalizados para seus clientes</div>`}
-        <button type="button" class="qp-addact ${d.actions.length ? '' : 'filled'}" data-addact>Adicionar Ação</button>
-      </div>
-      <div class="label">Selecione uma categoria</div>
-      <button type="button" class="qp-selectlike" data-catpick>${cat ? `<span style="color:${esc(cat.color)};display:grid">${icon('shapes', 14)}</span> ${esc(cat.name)}` : 'Nenhuma selecionada'}<span class="chev">${icon('chevDown', 14, 2)}</span></button>
-      <div class="error-msg" data-err></div>
-      <div class="qp-center"><button class="btn" data-save>${d.id ? 'Salvar' : 'Criar'}</button></div>`;
+        }).join('')
+      : `<div class="qp-empty" style="padding:14px 4px 4px"><div class="empty-icon">${icon('shapes', 22)}</div><h4 style="font-size:14px">Nenhuma ação foi atribuída</h4>
+          Adicione ações para criar e configurar modelos de envio personalizados para seus clientes</div>`;
+    return cards + `<button type="button" class="qp-addact ${d.actions.length ? '' : 'filled'}" data-addact>Adicionar Ação</button>`;
+  }
 
-    root.querySelectorAll('.textarea-wrap').forEach((w) => {
-      const f = w.querySelector('textarea, input');
-      const b = w.querySelector('[data-emoji]');
-      if (f && b) CRM.ui.attachEmoji(b, f);
-    });
-    root.querySelector('[data-title]').addEventListener('input', (e) => (d.title = e.target.value));
-    root.oninput = (e) => {
+  // Digitação e arquivos das ações (vale para o painel e para a janela "Editar e enviar").
+  function bindEditor(E) {
+    E.host.oninput = (e) => {
       const el = e.target.closest('[data-i][data-k]');
       if (!el) return;
-      const a = d.actions[+el.dataset.i];
+      const a = E.draft.actions[+el.dataset.i];
       const path = el.dataset.k.split('.');
       if (path[0] === 'items') a.items[+path[1]][path[2]] = el.value;
       else a[el.dataset.k] = el.type === 'number' ? Number(el.value) : el.value;
     };
-    root.onchange = async (e) => {
+    E.host.onchange = (e) => {
       const f = e.target.closest('[data-file]');
-      if (f && f.files[0]) return pickFile(+f.dataset.file, f.files[0]);
+      if (f && f.files[0]) return pickFile(E, +f.dataset.file, f.files[0]);
       const af = e.target.closest('[data-afile]');
-      if (af && af.files[0]) return pickAudio(+af.dataset.afile, af.files[0]);
+      if (af && af.files[0]) return pickAudio(E, +af.dataset.afile, af.files[0]);
       const sel = e.target.closest('select[data-i][data-k]');
-      if (sel) d.actions[+sel.dataset.i][sel.dataset.k] = sel.value;
+      if (sel) E.draft.actions[+sel.dataset.i][sel.dataset.k] = sel.value;
     };
-    root.onclick = (e) => onEditClick(e, cats);
   }
 
-  async function redrawKeepScroll() {
-    const top = root.scrollTop;
-    await drawEdit();
-    root.scrollTop = top;
-  }
-
-  async function pickFile(i, file) {
+  async function pickFile(E, i, file) {
     if (file.size > 60 * 1024 * 1024) return toast('Arquivo muito grande (máximo 60 MB).', 'err');
-    const a = view.draft.actions[i];
+    const a = E.draft.actions[i];
     a._pending = { dataUrl: await CRM.util.readFileAsDataURL(file), name: file.name, mime: file.type || 'application/octet-stream' };
     a.name = file.name;
-    redrawKeepScroll();
+    E.redraw();
   }
 
-  async function pickAudio(i, blob) {
+  async function pickAudio(E, i, blob) {
     try {
       toast('Convertendo áudio…');
       const out = await CRM.audio.toOggOpus(blob);
-      const a = view.draft.actions[i];
+      const a = E.draft.actions[i];
       a._pending = { dataUrl: await CRM.util.blobToDataURL(out.blob), name: 'audio.ogg', mime: 'audio/ogg' };
       a.name = `Áudio (${CRM.util.formatDuration(out.seconds)})`;
       a.seconds = out.seconds;
-      redrawKeepScroll();
+      E.redraw();
     } catch (err) {
       toast('Não consegui ler este áudio: ' + err.message, 'err');
     }
   }
 
-  async function onEditClick(e, cats) {
-    const d = view.draft;
+  // Cliques nas ações. Devolve true se o clique era de uma ação.
+  function actionClick(E, e) {
+    const d = E.draft;
     const b = (sel) => e.target.closest(sel);
-    if (b('[data-back]')) {
-      if ((d.title || d.actions.length) && !confirm('Sair sem salvar esta resposta rápida?')) return;
-      return go({ name: 'list' });
-    }
-    if (b('[data-import]')) return root.querySelector(`[data-file="${b('[data-import]').dataset.import}"]`).click();
-    if (b('[data-aimport]')) return root.querySelector(`[data-afile="${b('[data-aimport]').dataset.aimport}"]`).click();
+    if (b('[data-import]')) return E.host.querySelector(`[data-file="${b('[data-import]').dataset.import}"]`).click(), true;
+    if (b('[data-aimport]')) return E.host.querySelector(`[data-afile="${b('[data-aimport]').dataset.aimport}"]`).click(), true;
     if (b('[data-arec]')) {
-      const i = +b('[data-arec]').dataset.arec;
-      if (recorder && recorder.index === i) {
-        const rec = recorder.rec;
-        recorder = null;
-        return pickAudio(i, await rec.stop());
-      }
-      if (recorder) return toast('Pare a gravação atual primeiro.', 'err');
-      try {
-        recorder = { index: i, rec: await CRM.audio.startRecording() };
-        redrawKeepScroll();
-      } catch (err) {
-        toast('Não consegui usar o microfone: ' + err.message, 'err');
-      }
-      return;
+      toggleRecording(E, +b('[data-arec]').dataset.arec);
+      return true;
     }
-    if (b('[data-up]')) {
-      const i = +b('[data-up]').dataset.up;
-      [d.actions[i - 1], d.actions[i]] = [d.actions[i], d.actions[i - 1]];
-      return redrawKeepScroll();
-    }
-    if (b('[data-down]')) {
-      const i = +b('[data-down]').dataset.down;
-      [d.actions[i + 1], d.actions[i]] = [d.actions[i], d.actions[i + 1]];
-      return redrawKeepScroll();
-    }
+    const move = (from, to) => {
+      [d.actions[from], d.actions[to]] = [d.actions[to], d.actions[from]];
+      E.redraw();
+      return true;
+    };
+    if (b('[data-up]')) return move(+b('[data-up]').dataset.up, +b('[data-up]').dataset.up - 1);
+    if (b('[data-down]')) return move(+b('[data-down]').dataset.down, +b('[data-down]').dataset.down + 1);
     if (b('[data-delact]')) {
       d.actions.splice(+b('[data-delact]').dataset.delact, 1);
-      return redrawKeepScroll();
+      E.redraw();
+      return true;
     }
     if (b('[data-additem]')) {
       d.actions[+b('[data-additem]').dataset.additem].items.push({ title: '', description: '' });
-      return redrawKeepScroll();
+      E.redraw();
+      return true;
     }
     if (b('[data-delitem]')) {
       const [i, j] = b('[data-delitem]').dataset.delitem.split('.').map(Number);
       d.actions[i].items.splice(j, 1);
-      return redrawKeepScroll();
+      E.redraw();
+      return true;
     }
-    if (b('[data-addact]')) return openActionMenu(b('[data-addact]'));
-    if (b('[data-catpick]')) return openCategoryPicker(b('[data-catpick]'), cats);
-    if (b('[data-save]')) return saveDraft();
+    if (b('[data-addact]')) {
+      openActionMenu(E, b('[data-addact]'));
+      return true;
+    }
+    return false;
   }
 
-  function openActionMenu(anchor) {
+  async function toggleRecording(E, i) {
+    if (E.rec && E.rec.index === i) {
+      const rec = E.rec.rec;
+      E.rec = null;
+      return pickAudio(E, i, await rec.stop());
+    }
+    if (E.rec) return toast('Pare a gravação atual primeiro.', 'err');
+    try {
+      E.rec = { index: i, rec: await CRM.audio.startRecording() };
+      E.redraw();
+    } catch (err) {
+      toast('Não consegui usar o microfone: ' + err.message, 'err');
+    }
+  }
+
+  function openActionMenu(E, anchor) {
     const html = Q().GROUPS.map((g) => `<button class="opt qp-acc" data-acc="${g.key}">${icon(g.icon, 15)} ${esc(g.label)}<span class="chev">${icon('chevDown', 14, 2)}</span></button>
       <div class="qp-acc-body" data-accbody="${g.key}" hidden>${g.types.map(([k, l, ic]) => `<button class="opt" data-addtype="${k}">${icon(ic, 14)} ${esc(l)}</button>`).join('')}</div>`).join('');
-    const p = openPopup(anchor, html, { left: true, width: 240 });
+    const p = openPopup(anchor, html, { left: true, width: 240, layer: E.layer });
     p.onclick = (e) => {
       const acc = e.target.closest('[data-acc]');
       if (acc) {
@@ -626,18 +668,61 @@ CRM.quickPanel = (() => {
       const add = e.target.closest('[data-addtype]');
       if (!add) return;
       const type = add.dataset.addtype;
-      view.draft.actions.push({ type, ...JSON.parse(JSON.stringify(DEFAULTS[type] || {})) });
+      E.draft.actions.push({ type, ...JSON.parse(JSON.stringify(DEFAULTS[type] || {})) });
       closePopup();
-      redrawKeepScroll().then(() => {
-        const cards = root.querySelectorAll('.qp-action');
+      Promise.resolve(E.redraw()).then(() => {
+        const cards = E.host.querySelectorAll('.qp-action');
         const last = cards[cards.length - 1];
         if (last) {
           last.scrollIntoView({ block: 'nearest' });
-          const f = last.querySelector('textarea, input:not([type=file]), select');
+          const f = last.querySelector('textarea, input:not([type=file]):not([type=number]), select');
           if (f) f.focus();
         }
       });
     };
+  }
+
+  // Tela "Criar / Editar Resposta Rápida" no painel.
+  async function drawEdit() {
+    const d = view.draft;
+    const cats = await Q().categories();
+    const cat = cats.find((c) => c.id === d.categoryId);
+    // Mantém o mesmo editor entre redesenhos (para não perder uma gravação em andamento).
+    const E = editor && editor.draft === d && editor.host === root ? editor : makeEditor(root, d, redrawKeepScroll);
+    root.innerHTML = `
+      <div class="qp-titlebar"><button class="qp-back" data-back>${icon('back', 18, 2.2)}<span class="qp-tip">Voltar</span></button>
+        <h3>${d.id ? 'Editar Respostas Rápidas' : 'Criar Respostas Rápidas'}</h3></div>
+      <div class="label">Título</div>
+      <div class="textarea-wrap"><input class="input" data-title placeholder="Digite o título da resposta rápida" value="${esc(d.title)}" style="padding-right:34px">
+        <div class="textarea-tools" style="top:3px"><button type="button" class="icon-btn" data-emoji title="Emojis">${icon('smile', 17)}</button></div></div>
+      <div class="qp-card">
+        <div class="qp-card-title">Ação do Resposta Rapida</div>
+        ${tagsHTML()}
+        ${await actionsHTML(E)}
+      </div>
+      <div class="label">Selecione uma categoria</div>
+      <button type="button" class="qp-selectlike" data-catpick>${cat ? `<span style="color:${esc(cat.color)};display:grid">${icon('shapes', 14)}</span> ${esc(cat.name)}` : 'Nenhuma selecionada'}<span class="chev">${icon('chevDown', 14, 2)}</span></button>
+      <div class="error-msg" data-err></div>
+      <div class="qp-center"><button class="btn" data-save>${d.id ? 'Salvar' : 'Criar'}</button></div>`;
+
+    bindEmojis(root);
+    root.querySelector('[data-title]').addEventListener('input', (e) => (d.title = e.target.value));
+    bindEditor(E);
+    root.onclick = (e) => {
+      if (actionClick(E, e)) return;
+      if (e.target.closest('[data-back]')) {
+        if ((d.title || d.actions.length) && !confirm('Sair sem salvar esta resposta rápida?')) return;
+        return go({ name: 'list' });
+      }
+      if (e.target.closest('[data-catpick]')) return openCategoryPicker(e.target.closest('[data-catpick]'), cats);
+      if (e.target.closest('[data-save]')) return saveDraft(E);
+    };
+  }
+
+  async function redrawKeepScroll() {
+    const top = root.scrollTop;
+    await drawEdit();
+    root.scrollTop = top;
   }
 
   function openCategoryPicker(anchor, cats) {
@@ -666,11 +751,10 @@ CRM.quickPanel = (() => {
     p.querySelector('[data-cq]').focus();
   }
 
-  function validate(d) {
-    if (!d.title.trim()) return 'Digite o título da resposta rápida.';
-    if (!d.actions.length) return 'Adicione pelo menos uma ação.';
-    for (let i = 0; i < d.actions.length; i++) {
-      const a = d.actions[i];
+  function validateActions(actions) {
+    if (!actions.length) return 'Adicione pelo menos uma ação.';
+    for (let i = 0; i < actions.length; i++) {
+      const a = actions[i];
       const n = `Ação ${i + 1}: `;
       if (a.type === 'text' && !String(a.text || '').trim()) return n + 'escreva a mensagem.';
       if ((ACCEPT[a.type] || a.type === 'audio') && !a.mediaId && !a._pending) return n + 'importe o arquivo.';
@@ -681,15 +765,18 @@ CRM.quickPanel = (() => {
       if (a.type === 'list' && (!String(a.description || '').trim() || !(a.items || []).some((it) => String(it.title || '').trim()))) return n + 'escreva o texto e pelo menos uma opção.';
       if (['wait', 'typing', 'recording'].includes(a.type) && !(Number(a.seconds) > 0)) return n + 'informe os segundos.';
       if ((a.type === 'tabAdd' || a.type === 'tabRemove') && !a.tabId) return n + 'escolha a aba.';
+      for (const k of ['typing', 'recording', 'wait']) {
+        if (a.type !== k && a[k] != null && !(Number(a[k]) >= 0 && Number(a[k]) <= 600)) return n + 'os segundos devem ficar entre 0 e 600.';
+      }
     }
     return '';
   }
 
-  async function saveDraft() {
+  async function saveDraft(E) {
     const d = view.draft;
     const err = root.querySelector('[data-err]');
-    if (recorder) return (err.textContent = 'Pare a gravação antes de salvar.');
-    const problem = validate(d);
+    if (E.rec) return (err.textContent = 'Pare a gravação antes de salvar.');
+    const problem = !d.title.trim() ? 'Digite o título da resposta rápida.' : validateActions(d.actions);
     if (problem) return (err.textContent = problem);
     const old = d.id ? await Q().get(d.id) : null;
     const keep = new Set();

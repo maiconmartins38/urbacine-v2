@@ -112,6 +112,19 @@ CRM.panel = (() => {
     apply();
   }
 
+  // Raio ⚡ ao lado do campo de mensagem: mostra/esconde as Mensagens Rápidas.
+  async function toggleQuick() {
+    if (open && tab === 'quick') return setOpen(false);
+    if (tab !== 'quick') {
+      if (tab === 'client' && dirty && !confirm('Há alterações não salvas no cadastro. Sair mesmo assim?')) return;
+      tab = 'quick';
+      dirty = false;
+    }
+    open = true;
+    await store.saveSettings({ ...(await store.getSettings()), panelOpen: true, panelTab: 'quick' });
+    apply();
+  }
+
   function body() {
     return shadow.querySelector('[data-pbody]');
   }
@@ -195,5 +208,10 @@ CRM.panel = (() => {
     }).catch(() => {});
   }
 
-  return { start, rerender: () => open && render(), get root() { return shadow; }, WIDTH: P };
+  return {
+    start, toggleQuick, rerender: () => open && render(),
+    get root() { return shadow; },
+    get quickOpen() { return open && tab === 'quick'; },
+    WIDTH: P,
+  };
 })();

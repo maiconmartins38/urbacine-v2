@@ -30,6 +30,17 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 
 No próprio Chrome (`chrome.storage.local`), só neste computador e neste perfil do Chrome.
 
+### Importar backup (engrenagem ⚙ no fim do menu da esquerda → Geral)
+
+- **Backup desta extensão**: importa tudo (respostas rápidas, categorias, abas, cadastros,
+  anotações, agendamentos, renovações e arquivos). Dá para somar ao que já existe ou substituir.
+- **Backup de outra ferramenta**: se as partes do arquivo estiverem criptografadas (começam com
+  `U2FsdGVkX1`), só abre com a senha/chave de quem gerou. A extensão tenta sozinha com o número
+  do WhatsApp e aceita uma senha digitada. Sem senha, dá para colar os dados abertos copiados
+  da outra extensão (passo a passo na própria tela).
+- Dados abertos de outra ferramenta: a extensão procura respostas rápidas, categorias e abas
+  e mostra o que achou antes de importar. Não repete respostas iguais.
+
 ## Técnico
 
 - `page/bridge.js` usa a biblioteca [WA-JS](https://github.com/wppconnect-team/wa-js)

@@ -101,7 +101,8 @@
     clearInterval(placeTimer);
     clearInterval(tickTimer);
     if (barHost) barHost.remove();
-    ['crm-ext-host', 'crm-ext-tabs', 'crm-ext-rail', 'crm-ext-name', 'crm-ext-abas', 'crm-ext-panel', 'crm-ext-panel-open', 'crm-ext-push'].forEach((id) => {
+    CRM.composer.remove();
+    ['crm-ext-host', 'crm-ext-tabs', 'crm-ext-rail', 'crm-ext-name', 'crm-ext-abas', 'crm-ext-panel', 'crm-ext-panel-open', 'crm-ext-push', 'crm-ext-runbar'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
@@ -119,6 +120,7 @@
     place();
     CRM.contactName.place();
     CRM.chatTabs.place();
+    CRM.composer.place();
   }, 700);
   window.addEventListener('resize', place);
 
@@ -126,6 +128,7 @@
     place();
     CRM.contactName.place();
     CRM.chatTabs.place();
+    CRM.composer.place();
     refreshBadges();
   });
   CRM.wa.on('ready', () => {
