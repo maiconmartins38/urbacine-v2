@@ -4,6 +4,7 @@
 CRM.layout = (() => {
   const H = 36; // altura da barra de abas (topo)
   const L = 38; // largura do menu lateral (esquerda)
+  let R = 0; // largura do painel da direita (0 = fechado)
   const ROOT = 'data-crm-root';
   const LAYER = 'data-crm-shift';
   const STYLE_ID = 'crm-ext-push';
@@ -61,10 +62,10 @@ CRM.layout = (() => {
   // Tela principal "fixa/absoluta": desce com top. Normal/relativa: desce com o espaço no body.
   function rootCss(position) {
     const size = `height: calc(100vh - ${H}px) !important; max-height: calc(100vh - ${H}px) !important;
-      max-width: calc(100vw - ${L}px) !important;`;
+      max-width: calc(100vw - ${L + R}px) !important;`;
     return position === 'fixed' || position === 'absolute'
-      ? `[${ROOT}] { top: ${H}px !important; left: ${L}px !important; width: calc(100vw - ${L}px) !important; ${size} }`
-      : `body { padding-top: ${H}px !important; padding-left: ${L}px !important; box-sizing: border-box !important; }
+      ? `[${ROOT}] { top: ${H}px !important; left: ${L}px !important; width: calc(100vw - ${L + R}px) !important; ${size} }`
+      : `body { padding-top: ${H}px !important; padding-left: ${L}px !important; padding-right: ${R}px !important; box-sizing: border-box !important; }
          [${ROOT}] { ${size} }`;
   }
 
@@ -93,7 +94,7 @@ CRM.layout = (() => {
     if (mode === 'root') setStyle(ROOT_CSS);
     if (mode === 'layers') {
       setStyle(ROOT_CSS + `
-        [${LAYER}] { top: ${H}px !important; left: ${L}px !important; width: calc(100vw - ${L}px) !important; max-width: calc(100vw - ${L}px) !important;
+        [${LAYER}] { top: ${H}px !important; left: ${L}px !important; width: calc(100vw - ${L + R}px) !important; max-width: calc(100vw - ${L + R}px) !important;
           height: calc(100vh - ${H}px) !important; max-height: calc(100vh - ${H}px) !important; }`);
       markLayers();
     }
@@ -121,7 +122,7 @@ CRM.layout = (() => {
           problems.push(`${p.id || p.tagName.toLowerCase()} fica embaixo do menu lateral (left ${Math.round(r.left)})`);
           break;
         }
-        if (r.right > window.innerWidth + 2) {
+        if (r.right > window.innerWidth - R + 2) {
           problems.push(`${p.id || p.tagName.toLowerCase()} passa da borda direita (right ${Math.round(r.right)})`);
           break;
         }
@@ -198,6 +199,13 @@ CRM.layout = (() => {
     });
   }
 
+  // Painel da direita abriu/fechou: reaplica o mesmo modo com a nova largura.
+  function setRight(px) {
+    if (px === R) return;
+    R = px;
+    if (applied && applied !== 'overlay') apply(applied);
+  }
+
   async function setMode(mode) {
     wanted = mode;
     clear();
@@ -231,5 +239,5 @@ CRM.layout = (() => {
     return lines.join('\n');
   }
 
-  return { start, setMode, diagnose, MODES, get mode() { return wanted; }, get applied() { return applied; }, HEIGHT: H, LEFT: L };
+  return { start, setMode, setRight, diagnose, MODES, get mode() { return wanted; }, get applied() { return applied; }, get right() { return R; }, HEIGHT: H, LEFT: L };
 })();

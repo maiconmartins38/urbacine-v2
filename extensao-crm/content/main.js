@@ -101,7 +101,7 @@
     clearInterval(placeTimer);
     clearInterval(tickTimer);
     if (barHost) barHost.remove();
-    ['crm-ext-host', 'crm-ext-tabs', 'crm-ext-rail', 'crm-ext-name', 'crm-ext-abas', 'crm-ext-push'].forEach((id) => {
+    ['crm-ext-host', 'crm-ext-tabs', 'crm-ext-rail', 'crm-ext-name', 'crm-ext-abas', 'crm-ext-panel', 'crm-ext-panel-open', 'crm-ext-push'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
@@ -111,6 +111,7 @@
   place();
   CRM.tabs.mount();
   CRM.rail.mount();
+  CRM.panel.start();
   CRM.ui.toast('CRM WhatsApp ativo ✓ (versão ' + chrome.runtime.getManifest().version + ')', 'ok');
   CRM.wa.on('error', (error) => CRM.ui.toast('CRM WhatsApp: ' + error + ' Recarregue a página (F5).', 'err'));
   const placeTimer = setInterval(() => {

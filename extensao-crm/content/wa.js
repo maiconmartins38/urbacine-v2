@@ -81,7 +81,12 @@ CRM.wa = (() => {
       }
       return state.activeChat;
     },
-    sendText: (chatId, text) => call('sendText', { chatId, text }),
+    sendText: (chatId, text, options) => call('sendText', { chatId, text, options }),
+    sendPix: (chatId, params) => call('sendPix', { chatId, params }),
+    sendContact: (chatId, contact) => call('sendContact', { chatId, contact }),
+    sendList: (chatId, options) => call('sendList', { chatId, options }),
+    chatAction: (chatId, op, ms) => call('chatAction', { chatId, op, ms }, 60000),
+    getProfilePic: (id) => call('getProfilePic', { id }, 15000),
     sendFile: (chatId, dataUrl, options) => call('sendFile', { chatId, dataUrl, options }),
     listChats: () => call('listChats', {}, 60000),
     setChatList: (type, ids) => call('setChatList', { type, ids }, 20000),

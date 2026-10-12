@@ -38,6 +38,37 @@ CRM.ui = (() => {
     checkCircle: '<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M7.8 12.3l3 3 5.4-5.8" stroke="#fff" stroke-width="2.2"/>',
     userEdit: '<circle cx="9.5" cy="8" r="3.8"/><path d="M3 20c.9-3.4 3.3-5.2 6.5-5.2 1 0 1.9.2 2.7.5"/><path d="M14.5 20.5l.5-2.2 4.3-4.3a1.3 1.3 0 0 1 1.8 1.8l-4.3 4.3z"/>',
     search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+    msg: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/>',
+    video: '<rect x="3" y="6.5" width="12.5" height="11" rx="2"/><path d="M15.5 10.5l5-3v9l-5-3z"/>',
+    pix: '<path d="M12 3.5l8.5 8.5-8.5 8.5L3.5 12z"/><path d="M8.5 12h7M12 8.5v7"/>',
+    group: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.8 14.6c2.3-.3 4.1 1 4.7 3.7"/>',
+    contactCard: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="2.8"/><path d="M7.5 18c.8-2.3 2.6-3.4 4.5-3.4s3.7 1.1 4.5 3.4"/>',
+    banner: '<rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9h17"/><path d="M7 13h10M7 16h6"/>',
+    sticker: '<path d="M14 3.5H6.5a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h7l7-7v-7a3 3 0 0 0-3-3z"/><path d="M13.5 20.5v-4a3 3 0 0 1 3-3h4"/><path d="M8.5 9.5h.01M13 9.5h.01" stroke-width="2.6"/>',
+    list: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" stroke-width="2.8"/>',
+    folderMinus: '<path d="M20.5 12V8.5a2 2 0 0 0-2-2h-6.3L10 4H5.5a2 2 0 0 0-2 2v11.5a2 2 0 0 0 2 2H12"/><path d="M15 18.5h6"/>',
+    timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M9.5 2.5h5"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    typing: '<path d="M4 16.5l5-5 3 3 4-4"/><path d="M4 20h16"/><path d="M15.5 5.5l3 3"/>',
+    recDot: '<circle cx="12" cy="12" r="6" fill="#e5484d" stroke="none"/>',
+    grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
+    gridPlus: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><path d="M16.75 13.5v6.5M13.5 16.75H20"/>',
+    archive: '<rect x="3.5" y="4.5" width="17" height="4.5" rx="1"/><path d="M5 9v9.5a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5V9"/><path d="M10 13h4"/>',
+    pin: '<path d="M9 3.5h6l-1 5 3.5 3.5h-11L10 8.5z"/><path d="M12 12v8.5"/>',
+    mailDot: '<rect x="3.5" y="6" width="14" height="12" rx="2"/><path d="M3.5 8l7 5 7-5"/><circle cx="19" cy="6" r="2.5" fill="currentColor"/>',
+    block: '<circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/>',
+    shapes: '<path d="M7 3.5l3.5 6h-7z"/><circle cx="16.5" cy="7" r="3"/><rect x="5" y="13.5" width="6" height="6" rx="1"/><path d="M16.5 13l3.5 6.5h-7z"/>',
+    back: '<path d="M9 7L4 12l5 5"/><path d="M4 12h9a7 7 0 0 1 7 7"/>',
+    more: '<path d="M5.5 12h.01M12 12h.01M18.5 12h.01" stroke-width="3"/>',
+    eye2: '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/>',
+    play: '<path d="M6.5 4.5l13 7.5-13 7.5z"/>',
+    chevDown: '<path d="M6 9l6 6 6-6"/>',
+    chevUp: '<path d="M6 15l6-6 6 6"/>',
+    copy: '<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/>',
+    arrowUp: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    arrowDown: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    tag: '<path d="M3.5 12V4.5a1 1 0 0 1 1-1H12l8.5 8.5-8 8z"/><circle cx="8" cy="8" r="1.5"/>',
+    money: '<path d="M12 3v18M16.3 7.3C15.7 6 14.2 5.2 12.2 5.2c-2.4 0-4.2 1.2-4.2 3.1 0 4.6 8.4 2.6 8.4 7.3 0 1.9-1.9 3.2-4.3 3.2-2.2 0-3.8-.9-4.4-2.4"/>',
     renewed: '<circle cx="12" cy="12" r="9"/><path d="M7.8 12.3l3 3 5.4-5.8"/>',
   };
 
@@ -132,6 +163,8 @@ CRM.ui = (() => {
       box.className = 'notices';
       shadow.querySelector('.root').appendChild(box);
     }
+    // Fica ao lado do painel da direita (quando aberto), sem tapar as abas dele.
+    box.style.right = ((CRM.layout && CRM.layout.right) || 0) + 12 + 'px';
     const n = document.createElement('div');
     n.className = 'notice';
     n.innerHTML = `${icon('checkCircle', 18)}<span></span>`;

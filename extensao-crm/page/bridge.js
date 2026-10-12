@@ -37,8 +37,39 @@
   const handlers = {
     status: () => ({ ready: isReady() }),
     activeChat: () => chatInfo(window.WPP.chat.getActiveChat()),
-    sendText: async ({ chatId, text }) =>
-      confirmSent(await window.WPP.chat.sendTextMessage(chatId, text, { createChat: true })),
+    sendText: async ({ chatId, text, options }) =>
+      confirmSent(await window.WPP.chat.sendTextMessage(chatId, text, { createChat: true, ...(options || {}) })),
+    sendPix: async ({ chatId, params }) =>
+      confirmSent(await window.WPP.chat.sendPixKeyMessage(chatId, params, { createChat: true })),
+    sendContact: async ({ chatId, contact }) =>
+      confirmSent(await window.WPP.chat.sendVCardContactMessage(chatId, contact, { createChat: true })),
+    sendList: async ({ chatId, options }) =>
+      confirmSent(await window.WPP.chat.sendListMessage(chatId, { createChat: true, ...options })),
+    // Ações na conversa usadas pelas respostas rápidas.
+    chatAction: async ({ chatId, op, ms }) => {
+      const chat = window.WPP.chat;
+      const ops = {
+        composing: () => chat.markIsComposing(chatId, ms),
+        recording: () => chat.markIsRecording(chatId, ms),
+        paused: () => chat.markIsPaused(chatId),
+        archive: () => chat.archive(chatId, true),
+        unarchive: () => chat.archive(chatId, false),
+        pin: () => chat.pin(chatId, true),
+        unpin: () => chat.pin(chatId, false),
+        markUnread: () => chat.markIsUnread(chatId),
+        block: () => window.WPP.blocklist.blockContact(chatId),
+      };
+      if (!ops[op]) throw new Error('Ação desconhecida: ' + op);
+      await ops[op]();
+      return true;
+    },
+    getProfilePic: async ({ id }) => {
+      try {
+        return (await window.WPP.contact.getProfilePictureUrl(id)) || '';
+      } catch (_) {
+        return '';
+      }
+    },
     sendFile: async ({ chatId, dataUrl, options }) =>
       confirmSent(await window.WPP.chat.sendFileMessage(chatId, dataUrl, { createChat: true, ...options })),
     // Conversas para escolher contatos das abas (sem canais e listas de transmissão).

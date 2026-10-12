@@ -155,25 +155,36 @@ CRM.clients = (() => {
       if (!nameValue) return (errorBox.textContent = 'Escreva o nome do cliente.');
       if (cents == null) return (errorBox.textContent = 'Valor inválido. Exemplo: 150,00');
 
-      const client = {
-        ...c,
-        id: c.id || uid(),
-        chatId,
+      await saveFor(chatId, {
         name: nameValue,
         phone: phoneValue,
         description: field('description').value.trim(),
         valueCents: cents,
         kanbanColumnId: field('kanban').value || null,
-        createdAt: c.createdAt || Date.now(),
-        updatedAt: Date.now(),
-      };
-      await store.updateClients((list) => list.filter((x) => x.id !== client.id).concat(client));
-      const previousTabId = currentTab ? currentTab.id : null;
-      if (previousTabId !== client.kanbanColumnId) await CRM.tabs.moveChat(chatId, previousTabId, client.kanbanColumnId);
+      });
       toast(editing ? 'Cadastro atualizado.' : 'Cliente cadastrado.', 'ok');
       openList();
     });
   }
 
-  return { openList, countFor, forChat, parseMoney, formatMoney };
+  // Grava o cadastro da conversa (cria ou atualiza) e põe o cliente na aba do Kanban.
+  // Usado pela janela do Cadastro e pelo painel da direita — os dois mexem no mesmo registro.
+  async function saveFor(chatId, data) {
+    const existing = await forChat(chatId);
+    const currentTab = await CRM.tabs.tabOf(chatId, existing && existing.kanbanColumnId);
+    const client = {
+      ...(existing || {}),
+      id: (existing && existing.id) || uid(),
+      chatId,
+      ...data,
+      createdAt: (existing && existing.createdAt) || Date.now(),
+      updatedAt: Date.now(),
+    };
+    await store.updateClients((list) => list.filter((x) => x.id !== client.id).concat(client));
+    const previousTabId = currentTab ? currentTab.id : null;
+    if (previousTabId !== (client.kanbanColumnId || null)) await CRM.tabs.moveChat(chatId, previousTabId, client.kanbanColumnId || null);
+    return client;
+  }
+
+  return { openList, countFor, forChat, saveFor, parseMoney, formatMoney, formatPhone };
 })();

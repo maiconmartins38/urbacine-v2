@@ -115,9 +115,7 @@ CRM.schedules = (() => {
     if (s.type === 'quick') {
       const quick = await CRM.quick.get(s.quickReplyId);
       if (!quick) throw new Error('A mensagem rápida escolhida não existe mais (foi excluída?).');
-      const quickText = fillVariables(quick.text, s).trim();
-      if (!quickText) throw new Error('A mensagem rápida está vazia.');
-      await CRM.wa.sendText(s.chatId, quickText);
+      await CRM.quickRun.execute(quick, { chatId: s.chatId, chatName: s.chatName });
       return;
     }
     throw new Error('Tipo de mensagem desconhecido.');
