@@ -593,7 +593,7 @@ CRM.quickPanel = (() => {
   // Campo de segundos dentro de uma frase (ex.: "Aguarde para chamar a próxima ação por [5] Segundos").
   const timer = (i, k, before, val) =>
     `<div class="qp-timer">${before} <input type="number" min="0" max="600" step="1" data-i="${i}" data-k="${k}" value="${esc(val == null ? 0 : val)}"> Segundos</div>`;
-  const tagsHTML = () => `<span class="qp-tags">#Tags ${icon('info', 11, 2)}<span class="info-pop">Use <b>{nome}</b> nos textos para colocar o primeiro nome do contato.</span></span>`;
+  const tagsHTML = () => `<span class="qp-tags">#Tags ${icon('info', 11, 2)}<span class="info-pop">Use <b>{nome}</b> nos textos para colocar o primeiro nome do contato e <b>{vencimento}</b> para a data do vencimento dele (do Cadastro).</span></span>`;
 
   // Um editor de ações: host = elemento onde ele é desenhado; draft = { actions: [...] };
   // redraw() desenha de novo; layer = onde abrir os menus (padrão: o painel).

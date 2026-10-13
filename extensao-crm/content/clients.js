@@ -4,7 +4,7 @@
 // leva para NUTRIR e REMARKTING (ver renewals.js).
 CRM.clients = (() => {
   const { esc, uid, formatDateTime } = CRM.util;
-  const { icon, modal, toast } = CRM.ui;
+  const { icon, modal, toast, notice } = CRM.ui;
   const store = CRM.store;
 
   const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -84,9 +84,13 @@ CRM.clients = (() => {
     el.querySelectorAll('[data-del]').forEach((b) =>
       b.addEventListener('click', async () => {
         const c = all.find((x) => x.id === b.dataset.del);
-        if (!confirm('Excluir este cadastro? O vencimento e as mensagens de renovação dele também serão apagados.')) return;
+        const inTabs = (await CRM.tabs.list()).filter((t) => (t.chatIds || []).includes(c.chatId)).map((t) => t.name);
+        if (!confirm(`Excluir o cadastro de ${c.name || 'este cliente'}?\n\nSai tudo o que é dele na ferramenta:\n• nome, telefone, valor e descrição\n• vencimento e mensagens de renovação, NUTRIR e remarketing` +
+          (inTabs.length ? `\n• aba${inTabs.length > 1 ? 's' : ''} do Kanban: ${inTabs.join(', ')}` : '') + '\n\n(As anotações e a conversa no WhatsApp continuam.)')) return;
         await store.updateClients((l) => l.filter((x) => x.id !== c.id));
         await CRM.renewals.removeCycle(c.chatId);
+        await CRM.tabs.removeChat(c.chatId);
+        notice('Cadastro excluído');
         openList();
       })
     );

@@ -178,6 +178,20 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
 
 .quick-card { border-radius: 10px; box-shadow: 0 2px 10px rgba(11, 20, 26, .1); padding: 10px 12px 12px; margin-bottom: 12px; }
 .quick-preview { font-size: 12.5px; white-space: pre-wrap; margin-top: 6px; }
+.qsel { position: relative; display: flex; align-items: center; }
+.qsel-ico { position: absolute; left: 10px; color: #8696a0; display: grid; pointer-events: none; }
+.qsel-input { padding-left: 32px !important; padding-right: 34px !important; }
+.qsel-btn { position: absolute; right: 4px; border: 0; background: none; color: #54656f; width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; }
+.qsel-btn:hover { background: #f0f2f5; }
+.qsel-native { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; overflow: hidden; }
+.qsel-list { position: fixed; z-index: 30; background: #fff; border-radius: 10px; box-shadow: 0 8px 26px rgba(11, 20, 26, .22); padding: 5px; overflow: auto; }
+.qsel-item { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 7px; font-size: 13px; cursor: pointer; }
+.qsel-item.on { background: #e6f4f2; }
+.qsel-item.sel .qsel-name { color: var(--teal); font-weight: 700; }
+.qsel-item b { color: var(--teal); }
+.qsel-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qsel-cat { font-size: 10.5px; font-weight: 700; flex: none; }
+.qsel-none { padding: 9px; font-size: 12.5px; color: var(--muted); }
 .quick-preview:empty { display: none; }
 .link-btn { border: 0; background: none; color: var(--teal); font-weight: 600; font-size: 12.5px; padding: 6px 0 0; }
 .link-btn:hover { text-decoration: underline; }

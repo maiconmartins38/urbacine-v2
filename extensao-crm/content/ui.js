@@ -104,6 +104,14 @@ CRM.ui = (() => {
   window.addEventListener(
     'keydown',
     (e) => {
+      const target = e.composedPath()[0];
+      if (e.key === 'Escape' && target && target.dataset && target.dataset.listOpen) {
+        // Esc com a lista de busca aberta fecha só a lista (não a janela nem a conversa).
+        e.stopPropagation();
+        e.preventDefault();
+        target.dispatchEvent(new CustomEvent('qsel-close'));
+        return;
+      }
       if (e.key === 'Escape' && onEscape) {
         e.stopPropagation();
         e.preventDefault();

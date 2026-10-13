@@ -7,7 +7,10 @@ CRM.quickRun = (() => {
 
   class Cancelled extends Error {}
 
-  const fill = (text, ctx) => String(text || '').replace(/\{nome\}/gi, firstName(ctx.chatName));
+  // {nome} = primeiro nome do contato · {vencimento} = data do vencimento do cliente (do Cadastro)
+  const fill = (text, ctx) => String(text || '')
+    .replace(/\{nome\}/gi, firstName(ctx.chatName))
+    .replace(/\{vencimento\}/gi, ctx.dueDate ? ctx.dueDate.split('-').reverse().join('/') : '');
   const secs = (v) => Math.max(0, Math.min(600, Number(v) || 0));
 
   async function media(a) {
@@ -110,6 +113,10 @@ CRM.quickRun = (() => {
   // ctx = { chatId, chatName }. Para no primeiro erro e diz em qual ação foi.
   // run (opcional) = { cancelled, onProgress({ index, total, type, phase, left, fraction }) }.
   async function execute(q, ctx, run = {}) {
+    if (ctx.dueDate === undefined && CRM.renewals) {
+      const r = await CRM.renewals.forChat(ctx.chatId);
+      ctx = { ...ctx, dueDate: r ? r.dueDate : '' };
+    }
     const actions = q.actions || [];
     if (!actions.length) throw new Error('Esta resposta rápida não tem ações.');
     const total = actions.length;

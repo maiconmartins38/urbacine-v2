@@ -330,6 +330,8 @@ CRM.renewals = (() => {
     const late = toTimestamp(r.dueDate, r.time) <= Date.now();
     const base = late ? todayISO() : r.dueDate;
     const cents = c && c.valueCents != null ? c.valueCents : c && c.previousValueCents != null ? c.previousValueCents : null;
+    const replies = await CRM.quick.list();
+    const settings = await store.getSettings();
     let months = 1;
 
     const el = CRM.ui.modal(`<div class="modal-head"><h2 class="modal-title">Renovado</h2></div>
@@ -343,8 +345,26 @@ CRM.renewals = (() => {
       <div class="field"><div class="label">Valor (lucro)</div>
         <input class="input" name="newValue" inputmode="decimal" placeholder="R$ 0,00" value="${cents != null ? esc(CRM.clients.formatMoney(cents)) : ''}"></div>
       <div class="plan" data-rplan></div>
+      <div data-rquick></div>
       <div class="error-msg" data-error></div>
       <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-ok>Confirmar renovação</button></div>`);
+    // Mensagem de renovação: enviada para o cliente ao confirmar (fica guardada como padrão).
+    const rquick = el.querySelector('[data-rquick]');
+    const renderQuick = (selectedId) => {
+      rquick.innerHTML = CRM.quick.selectHTML({
+        name: 'renewedQuick',
+        label: 'Mensagem de renovação — enviada para o cliente ao confirmar ' + infoHTML('Fica escolhida para as próximas vezes. Use <b>{vencimento}</b> na mensagem para mostrar a nova data.'),
+        selectedId,
+        replies,
+        emptyLabel: 'Não enviar mensagem',
+      });
+      CRM.quick.bindPreview(rquick, replies);
+      rquick.querySelector('[data-new-quick]').addEventListener('click', () => CRM.quick.openQuickForm(async (item) => {
+        replies.splice(0, replies.length, ...(await CRM.quick.list()));
+        renderQuick(item.id);
+      }));
+    };
+    renderQuick(settings.renewedQuickId || '');
     const date = el.querySelector('[name="newDate"]');
     const time = el.querySelector('[name="newTime"]');
     const value = el.querySelector('[name="newValue"]');
@@ -376,8 +396,12 @@ CRM.renewals = (() => {
       const name = (c && c.name) || r.chatName || chat.name || '';
       await CRM.clients.saveFor(chat.id, { name, phone: (c && c.phone) || r.chatPhone || chat.phone || '', valueCents: v, description: (c && c.description) || '' });
       const saved = await saveCycle(chat.id, { name, phone: r.chatPhone }, { dueDate: date.value, time: time.value, quick1Id: r.quick1Id, quick2Id: r.quick2Id });
+      const quickId = rquick.querySelector('select').value;
+      await store.saveSettings({ ...(await store.getSettings()), renewedQuickId: quickId });
       CRM.ui.closeModal();
       toast(`Renovado por ${months} ${months === 1 ? 'mês' : 'meses'}! Vence ${shortDate(saved.dueDate)} às ${saved.time} (aba ${monthTab(saved.dueDate)}).`, 'ok');
+      const q = quickId && replies.find((x) => x.id === quickId);
+      if (q) CRM.quickRun.send(q, { chatId: chat.id, chatName: name, dueDate: saved.dueDate });
     });
     setMonths(1);
   }

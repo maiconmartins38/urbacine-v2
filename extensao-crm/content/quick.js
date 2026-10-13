@@ -126,21 +126,33 @@ CRM.quick = (() => {
     return first ? first.type : 'text';
   }
 
-  // ---------- Seletor usado no agendamento e na renovação ----------
-  function selectHTML({ name, label, selectedId, replies }) {
-    const options = replies.length
-      ? `<option value="">Selecione…</option>` +
-        replies.map((q) => `<option value="${q.id}" ${q.id === selectedId ? 'selected' : ''}>${esc(q.title || summary(q).slice(0, 60))}</option>`).join('')
-      : `<option value="">Nenhuma mensagem rápida cadastrada</option>`;
+  // ---------- Seletor usado no agendamento, no cadastro, no Renovado e no Remarketing ----------
+  // Campo de busca: vai digitando e aparecem as mensagens que começam com o texto (primeiro)
+  // ou que têm o texto no nome. Por baixo fica um <select> escondido, que guarda o valor e
+  // avisa as telas com o evento "change" (como antes).
+  // emptyLabel: opção vazia (ex.: "Não enviar mensagem"); sem ela, é preciso escolher uma.
+  function selectHTML({ name, label, selectedId, replies, emptyLabel = '' }) {
+    const options = `<option value="">${esc(emptyLabel || 'Selecione…')}</option>` +
+      replies.map((q) => `<option value="${q.id}" ${q.id === selectedId ? 'selected' : ''}>${esc(q.title || summary(q).slice(0, 60))}</option>`).join('');
     return `<div class="quick-card">
       <div class="label">${CRM.ui.icon('bolt', 14, 2)} ${label}</div>
-      <select class="select" name="${name}" ${replies.length ? '' : 'disabled'}>${options}</select>
+      <div class="qsel" data-qsel="${name}" ${emptyLabel ? `data-empty="${esc(emptyLabel)}"` : ''}>
+        <span class="qsel-ico">${CRM.ui.icon('search', 14, 2)}</span>
+        <input class="input qsel-input" autocomplete="off" spellcheck="false" ${replies.length ? '' : 'disabled'}
+          placeholder="${replies.length ? 'Digite para procurar (ex.: M, 35)…' : 'Nenhuma mensagem rápida cadastrada'}">
+        <button type="button" class="qsel-btn" tabindex="-1" title="Ver todas">${CRM.ui.icon('chevDown', 14, 2.2)}</button>
+      </div>
+      <select class="select qsel-native" name="${name}" tabindex="-1" aria-hidden="true" ${replies.length ? '' : 'disabled'}>${options}</select>
       <div class="quick-preview muted" data-preview-for="${name}"></div>
       <button type="button" class="link-btn" data-new-quick="${name}">+ Nova mensagem rápida</button>
     </div>`;
   }
 
+  const plainText = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  // Liga a prévia e a busca de cada seletor dentro de "root".
   function bindPreview(root, replies) {
+    const catsPromise = categories();
     root.querySelectorAll('.quick-card select').forEach((sel) => {
       const box = root.querySelector(`[data-preview-for="${sel.name}"]`);
       const show = () => {
@@ -149,7 +161,152 @@ CRM.quick = (() => {
       };
       sel.addEventListener('change', show);
       show();
+      const combo = sel.parentNode.querySelector(`[data-qsel="${sel.name}"]`);
+      if (combo) catsPromise.then((cats) => enhance(combo, sel, replies, cats));
     });
+  }
+
+  function enhance(combo, sel, replies, cats) {
+    const input = combo.querySelector('.qsel-input');
+    const emptyLabel = combo.dataset.empty || '';
+    const titleOf = (q) => q.title || summary(q).slice(0, 60);
+    const catOf = (q) => cats.find((c) => c.id === q.categoryId);
+    let list = null;
+    let items = [];
+    let active = 0;
+
+    const current = () => replies.find((q) => q.id === sel.value);
+    const syncInput = () => {
+      const q = current();
+      input.value = q ? titleOf(q) : '';
+      input.placeholder = !replies.length ? 'Nenhuma mensagem rápida cadastrada' : emptyLabel && !q ? emptyLabel + ' (ou digite para procurar)' : 'Digite para procurar (ex.: M, 35)…';
+    };
+
+    function close() {
+      if (list) list.remove();
+      list = null;
+      delete input.dataset.listOpen;
+      document.removeEventListener('mousedown', outside, true);
+    }
+    function outside(e) {
+      const path = e.composedPath();
+      if (!path.includes(combo) && !(list && path.includes(list))) {
+        close();
+        syncInput();
+      }
+    }
+
+    // Começa com o texto vem primeiro; depois as que têm o texto em qualquer parte do nome.
+    function matches(term) {
+      const t = plainText(term).trim();
+      if (!t) return replies.slice();
+      const starts = [];
+      const has = [];
+      replies.forEach((q) => {
+        const name = plainText(titleOf(q));
+        if (name.startsWith(t) || name.split(/\s+/).some((w) => w.startsWith(t))) starts.push(q);
+        else if (name.includes(t)) has.push(q);
+      });
+      return starts.concat(has);
+    }
+
+    function choose(id) {
+      sel.value = id;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      close();
+      syncInput();
+    }
+
+    function render(term) {
+      const found = matches(term);
+      // "Não enviar" só aparece com o campo vazio (digitando, o Enter pega a primeira mensagem achada).
+      items = (emptyLabel && !plainText(term).trim() ? [{ id: '', empty: true }] : []).concat(found);
+      active = Math.min(active, Math.max(0, items.length - 1));
+      if (!list) {
+        list = document.createElement('div');
+        list.className = 'qsel-list';
+        // Dentro da janela (para ficar por cima dela) ou do painel.
+        (combo.closest('.modal') || combo.getRootNode().querySelector('.root')).appendChild(list);
+        input.dataset.listOpen = '1'; // Esc fecha só a lista, não a janela
+        list.addEventListener('mousedown', (e) => e.preventDefault()); // não tira o foco do campo
+        list.addEventListener('click', (e) => {
+          const it = e.target.closest('[data-qid]');
+          if (it) choose(it.dataset.qid);
+        });
+        document.addEventListener('mousedown', outside, true);
+      }
+      const t = plainText(term).trim();
+      const mark = (text) => {
+        if (!t) return esc(text);
+        const i = plainText(text).indexOf(t);
+        return i < 0 ? esc(text) : esc(text.slice(0, i)) + '<b>' + esc(text.slice(i, i + t.length)) + '</b>' + esc(text.slice(i + t.length));
+      };
+      list.innerHTML = items.length
+        ? items.map((q, i) => q.empty
+          ? `<div class="qsel-item muted ${i === active ? 'on' : ''}" data-qid="">${esc(emptyLabel)}</div>`
+          : `<div class="qsel-item ${i === active ? 'on' : ''} ${q.id === sel.value ? 'sel' : ''}" data-qid="${q.id}">
+              <span class="qsel-name">${mark(titleOf(q))}</span>
+              ${catOf(q) ? `<span class="qsel-cat" style="color:${esc(catOf(q).color)}">${esc(catOf(q).name)}</span>` : ''}</div>`).join('')
+        : '<div class="qsel-none">Nenhuma mensagem rápida encontrada</div>';
+      place();
+      const on = list.querySelector('.qsel-item.on');
+      if (on) on.scrollIntoView({ block: 'nearest' });
+    }
+
+    // Abre embaixo do campo (ou em cima, se não couber) sem ser cortada pela janela.
+    function place() {
+      const r = input.getBoundingClientRect();
+      const below = window.innerHeight - r.bottom - 8;
+      const above = r.top - 8;
+      const up = below < 180 && above > below;
+      list.style.left = r.left + 'px';
+      list.style.width = r.width + 'px';
+      list.style.maxHeight = Math.min(260, up ? above : below) + 'px';
+      list.style.top = up ? '' : r.bottom + 4 + 'px';
+      list.style.bottom = up ? window.innerHeight - r.top + 4 + 'px' : '';
+    }
+
+    input.addEventListener('focus', () => {
+      input.select();
+      active = 0;
+      render('');
+    });
+    input.addEventListener('input', () => {
+      active = 0;
+      render(input.value);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (!list && (e.key === 'ArrowDown' || e.key === 'Enter')) return render(input.value);
+      if (!list) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % Math.max(1, items.length);
+        render(input.value);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (items[active]) choose(items[active].id);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+        syncInput();
+      } else if (e.key === 'Tab') {
+        close();
+        syncInput();
+      }
+    });
+    combo.querySelector('.qsel-btn').addEventListener('click', () => {
+      if (list) {
+        close();
+        syncInput();
+      } else input.focus();
+    });
+    input.addEventListener('qsel-close', () => {
+      close();
+      syncInput();
+    });
+    sel.addEventListener('change', syncInput);
+    syncInput();
   }
 
   // Cadastro rápido (título + texto) a partir do agendamento/renovação.

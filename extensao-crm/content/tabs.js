@@ -511,6 +511,12 @@ CRM.tabs = (() => {
     return targetId;
   }
 
+  // Tira a conversa de todas as abas (ex.: quando o cadastro do cliente é excluído).
+  async function removeChat(chatId) {
+    await updateTabs((all) => all.map((t) => ((t.chatIds || []).includes(chatId) ? { ...t, chatIds: t.chatIds.filter((x) => x !== chatId) } : t)));
+    if (selectedId) applyFilter();
+  }
+
   async function isInStage(chatId, stageName) {
     const keys = keysOf(stageName);
     return (await getTabs()).some((t) => keys.includes(plain(t.name)) && (t.chatIds || []).includes(chatId));
@@ -524,5 +530,5 @@ CRM.tabs = (() => {
   });
   CRM.wa.on('ready', () => selectedId && applyFilter());
 
-  return { mount, list: getTabs, tabOf, moveChat, setChatInTab, placeInStage, isInStage, MONTHS };
+  return { mount, list: getTabs, tabOf, moveChat, setChatInTab, placeInStage, isInStage, removeChat, MONTHS };
 })();
