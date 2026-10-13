@@ -1,5 +1,5 @@
-// Menu lateral esquerdo (como no vídeo). A engrenagem abre as Configurações; os
-// outros botões ainda só mostram o nome e serão ligados nas próximas etapas.
+// Menu lateral esquerdo (como no vídeo). "Funil CRM" abre o funil numa aba nova e a
+// engrenagem abre as Configurações; os outros botões serão ligados nas próximas etapas.
 CRM.rail = (() => {
   const W = CRM.layout.LEFT;
   const TOP = CRM.layout.HEIGHT;
@@ -30,7 +30,7 @@ CRM.rail = (() => {
     { key: 'kanban', icon: 'kanban', tip: 'CRM' },
     { key: 'schedules', icon: 'calendar', tip: 'Central De Agendamentos' },
     { key: 'flow', icon: 'flow', tip: 'Fluxo' },
-    { key: 'funnel', icon: 'funnel', tip: 'Funil CRM' },
+    { key: 'funnel', icon: 'funnel', tip: 'Funil CRM', open: () => openPage('funil/index.html') },
     { key: 'autoReply', icon: 'robot', tip: 'Auto Atendimento' },
     { key: 'followUp', icon: 'followUp', tip: 'Follow Up' },
     { key: 'status', icon: 'status', tip: 'Status' },
@@ -62,6 +62,15 @@ CRM.rail = (() => {
     .rail-btn:hover .rail-tip { opacity: 1; }
     .rail-version { font-size: 9.5px; color: #8696a0; margin-top: 4px; }
   `;
+
+  // Abre uma página da extensão numa aba nova (quem abre é o background).
+  async function openPage(page) {
+    try {
+      await chrome.runtime.sendMessage({ type: 'open-page', page });
+    } catch (_) {
+      CRM.ui.toast('Não consegui abrir a página. Recarregue o WhatsApp Web (F5) e tente de novo.', 'err');
+    }
+  }
 
   function buttonHTML(item) {
     return `<button class="rail-btn" data-rail="${item.key}">${svg(ICONS[item.icon], item.color)}<span class="rail-tip">${item.tip}</span></button>`;

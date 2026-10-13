@@ -19,3 +19,29 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     chrome.tabs.sendMessage(tab.id, { type: 'crm-tick' }).catch(() => {});
   }
 });
+
+// Páginas próprias da extensão abertas pelo WhatsApp (ex.: botão "Funil CRM").
+// Se a página já estiver aberta, só volta para ela; senão abre uma aba nova ao lado.
+const PAGES = ['funil/index.html'];
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || msg.type !== 'open-page' || !PAGES.includes(msg.page)) return;
+  openPage(msg.page, sender.tab).catch(() => {});
+  sendResponse(true);
+});
+
+async function openPage(page, fromTab) {
+  const url = chrome.runtime.getURL(page);
+  try {
+    const [open] = await chrome.runtime.getContexts({ contextTypes: ['TAB'], documentUrls: [url] });
+    if (open && open.tabId >= 0) {
+      await chrome.tabs.update(open.tabId, { active: true });
+      await chrome.windows.update(open.windowId, { focused: true });
+      return;
+    }
+  } catch (_) {
+    // segue e abre uma aba nova
+  }
+  const where = fromTab ? { index: fromTab.index + 1, openerTabId: fromTab.id, windowId: fromTab.windowId } : {};
+  await chrome.tabs.create({ url, ...where });
+}

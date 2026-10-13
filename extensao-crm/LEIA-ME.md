@@ -13,7 +13,7 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 ## Atualizar para uma versão nova
 
 1. Clique com o botão direito no `.zip` novo → **Extrair tudo** → **Extrair**. Abre uma pasta
-   (ex.: `CRM-WhatsApp-0.10.4`) com o `manifest.json` dentro.
+   (ex.: `CRM-WhatsApp-0.11.0`) com o `manifest.json` dentro.
 2. Em `chrome://extensions`, clique em **Carregar sem compactação** e escolha essa pasta.
 3. O cartão "CRM WhatsApp" passa a mostrar a versão nova. Recarregue o WhatsApp Web (F5).
 
@@ -49,6 +49,19 @@ As mensagens de NUTRIR e de remarketing ficam no botão **Remarketing** e são a
 os clientes (mudou lá, muda para todo mundo). Lá também dá para mudar os dias (D+3 / D+4), repetir
 o remarketing a cada 30 dias e ver quem está em NUTRIR e em REMARKTING.
 Se você tirar o cliente da aba NUTRIR na mão, a automação dele para.
+
+## Funil CRM (menu da esquerda)
+
+O botão **Funil CRM** abre uma aba nova do Chrome com os números do Cadastro
+(se a aba já estiver aberta, ele só volta para ela):
+
+- **Contatos**: clientes do Cadastro que estão com valor.
+- **Taxa de conversão por contato**: quantos dos clientes cadastrados estão com valor.
+- **Receita média por contato**: receita total ÷ contatos.
+- **Receita total**: soma dos valores.
+
+Quem vai para NUTRIR tem o valor zerado e sai da conta; quando renova com valor, volta.
+A aba se atualiza sozinha quando um cadastro muda.
 
 ## Onde ficam os dados
 

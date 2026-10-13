@@ -265,6 +265,8 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
   background: #f7f8fa; border-top: 1px solid #e9edef;
 }
 .cc-foot svg { color: var(--teal); }
+/* Dá para selecionar e copiar só um pedaço (ex.: o primeiro nome), mesmo se o WhatsApp bloquear a seleção. */
+.cc-name, .cc-value, .cc-foot { -webkit-user-select: text; user-select: text; cursor: text; }
 
 /* ---------- Emojis ---------- */
 .emoji-pop {
