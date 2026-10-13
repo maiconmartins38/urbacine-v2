@@ -1,5 +1,6 @@
-// Menu lateral esquerdo (como no vídeo). "Funil CRM" abre o funil numa aba nova e a
-// engrenagem abre as Configurações; os outros botões serão ligados nas próximas etapas.
+// Menu lateral esquerdo (como no vídeo). "Central De Agendamentos" abre o calendário,
+// "Funil CRM" abre o funil numa aba nova e a engrenagem abre as Configurações;
+// os outros botões serão ligados nas próximas etapas.
 CRM.rail = (() => {
   const W = CRM.layout.LEFT;
   const TOP = CRM.layout.HEIGHT;
@@ -26,7 +27,7 @@ CRM.rail = (() => {
   // Mesma ordem e nomes do vídeo. Os de baixo não tiveram o nome mostrado no vídeo (nomes provisórios).
   const TOP_ITEMS = [
     { key: 'kanban', icon: 'kanban', tip: 'CRM' },
-    { key: 'schedules', icon: 'calendar', tip: 'Central De Agendamentos' },
+    { key: 'schedules', icon: 'calendar', tip: 'Central De Agendamentos', open: () => CRM.calendar.open() },
     { key: 'flow', icon: 'flow', tip: 'Fluxo' },
     { key: 'funnel', icon: 'funnel', tip: 'Funil CRM', open: () => openPage('funil/index.html') },
     { key: 'autoReply', icon: 'robot', tip: 'Auto Atendimento' },

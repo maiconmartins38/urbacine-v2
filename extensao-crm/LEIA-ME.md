@@ -13,7 +13,7 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 ## Atualizar para uma versão nova
 
 1. Clique com o botão direito no `.zip` novo → **Extrair tudo** → **Extrair**. Abre uma pasta
-   (ex.: `CRM-WhatsApp-0.12.0`) com o `manifest.json` dentro.
+   (ex.: `CRM-WhatsApp-0.13.0`) com o `manifest.json` dentro.
 2. Em `chrome://extensions`, clique em **Carregar sem compactação** e escolha essa pasta.
 3. O cartão "CRM WhatsApp" passa a mostrar a versão nova. Recarregue o WhatsApp Web (F5).
 
@@ -49,6 +49,19 @@ As mensagens de NUTRIR e de remarketing ficam no botão **Remarketing** e são a
 os clientes (mudou lá, muda para todo mundo). Lá também dá para mudar os dias (D+3 / D+4), repetir
 o remarketing a cada 30 dias e ver quem está em NUTRIR e em REMARKTING.
 Se você tirar o cliente da aba NUTRIR na mão, a automação dele para.
+
+## Central de Agendamentos (menu da esquerda)
+
+Calendário do ano: os meses na coluna verde (com quantos envios estão agendados em cada um),
+os dias do mês no meio (o número embaixo do dia é quantos envios saem nele) e, ao lado, os
+cartões de quem vai receber mensagem, com o horário. Entram todos os envios: os agendamentos
+feitos na mão e os do ciclo de renovação (1 dia antes, no dia, 1 dia depois, NUTRIR e
+remarketing). Os recorrentes (ex.: mensal) aparecem em todos os dias em que vão sair.
+
+- Clique num **dia** para ver só ele; clique num **mês** (ou de novo no dia) para ver o mês todo.
+- Clique no **cartão** para abrir a conversa. O lápis edita um agendamento feito na mão.
+- O **+** agenda uma mensagem para a conversa aberta, já com a data escolhida.
+- Os que já saíram aparecem com a etiqueta **Enviada** (ou **Erro**).
 
 ## Funil CRM (menu da esquerda)
 

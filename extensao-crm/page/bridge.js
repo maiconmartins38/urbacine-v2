@@ -68,6 +68,11 @@
       await ops[op]();
       return true;
     },
+    // Abre a conversa no WhatsApp (usada pela Central de Agendamentos).
+    openChat: async ({ id }) => {
+      await window.WPP.chat.openChatBottom(id);
+      return true;
+    },
     getProfilePic: async ({ id }) => {
       try {
         return (await window.WPP.contact.getProfilePictureUrl(id)) || '';

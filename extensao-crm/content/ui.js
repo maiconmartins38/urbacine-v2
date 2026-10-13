@@ -123,11 +123,11 @@ CRM.ui = (() => {
     true
   );
 
-  function modal(html, { wide = false, onClose } = {}) {
+  function modal(html, { wide = false, full = false, onClose } = {}) {
     ensureHost();
     layer.innerHTML = '';
     const el = document.createElement('div');
-    el.className = 'modal' + (wide ? ' wide' : '');
+    el.className = 'modal' + (wide ? ' wide' : '') + (full ? ' full' : '');
     el.innerHTML = `<button class="modal-close" data-close title="Fechar">${icon('close', 18, 2)}</button>${html}`;
     layer.appendChild(el);
     const close = () => {

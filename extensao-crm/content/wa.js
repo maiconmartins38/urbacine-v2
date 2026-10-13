@@ -87,6 +87,7 @@ CRM.wa = (() => {
     sendList: (chatId, options) => call('sendList', { chatId, options }),
     chatAction: (chatId, op, ms) => call('chatAction', { chatId, op, ms }, 60000),
     getProfilePic: (id) => call('getProfilePic', { id }, 15000),
+    openChat: (id) => call('openChat', { id }, 15000),
     sendFile: (chatId, dataUrl, options) => call('sendFile', { chatId, dataUrl, options }),
     listChats: () => call('listChats', {}, 60000),
     setChatList: (type, ids) => call('setChatList', { type, ids }, 20000),

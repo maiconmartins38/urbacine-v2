@@ -54,6 +54,7 @@ svg { display: block; }
   max-height: calc(100vh - 40px); overflow: auto;
 }
 .modal.wide { width: 660px; }
+.modal.full { width: min(1240px, calc(100vw - 48px)); height: calc(100vh - 48px); max-height: none; padding: 0; overflow: hidden; }
 .modal-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-right: 26px; }
 .modal-title { font-size: 20px; font-weight: 700; margin: 0; flex: 1; }
 .modal-close {

@@ -384,7 +384,8 @@ CRM.schedules = (() => {
 
   // ---------- Tela: criar / editar ----------
   // preset: valores iniciais de um agendamento novo (ex.: vindo do menu ••• de uma resposta rápida).
-  async function openForm(existing, preset) {
+  // back: para onde voltar depois de salvar/cancelar (padrão: a lista de agendamentos).
+  async function openForm(existing, preset, back = openList) {
     const chat = CRM.wa.state.activeChat;
     if (!existing && !chat) return toast('Abra uma conversa para agendar uma mensagem.', 'err');
 
@@ -603,7 +604,7 @@ CRM.schedules = (() => {
 
     el.querySelector('[data-cancel]').addEventListener('click', () => {
       stopRecording();
-      openList();
+      back();
     });
 
     el.querySelector('[data-save]').addEventListener('click', async () => {
@@ -684,7 +685,7 @@ CRM.schedules = (() => {
 
       await store.upsertSchedule(item);
       toast(editing ? 'Agendamento atualizado.' : 'Mensagem agendada para ' + formatDateTime(at) + '.', 'ok');
-      openList();
+      back();
     });
 
     renderPane();
@@ -748,5 +749,5 @@ CRM.schedules = (() => {
   // "Criar Agendamento" no menu ••• da resposta rápida: já vem com ela selecionada.
   const newFromQuick = (q) => openForm(null, { type: 'quick', quickReplyId: q.id, title: q.title || '' });
 
-  return { openList, openReport, openSettings, newFromQuick, tick, pendingCount, unseenReports, nextOccurrence, STATUS_LABEL };
+  return { openList, openForm, openReport, openSettings, newFromQuick, tick, pendingCount, unseenReports, nextOccurrence, recurrenceLabel, preview, STATUS_LABEL };
 })();
