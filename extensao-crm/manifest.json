@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CRM WhatsApp",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "description": "CRM dentro do WhatsApp Web: cadastro, Kanban, renovação, respostas rápidas e agendamentos.",
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyYV0iPsEdX0Gm3NW/0K+JVVAh6zBWS0Y4VE1GOAaPh5rPjz49PxbNaqEFHw6K/p9BVJhYJD18Na8JRYVf1VExed1wvtPhxwo2+RK/IVxAgkyk9FsP5P0X3Id57XuR2+FjXJH1LRywCHAVWrxWTTGZxpAVLmtMLv60p+bq6GH+0UwI5UKZs3lrHjCwX0s8SxfMWVwnTfslJE7sxRXgq9JznDvD8jOq+kHbmjGH10tPV6vP9A3UCVYUD4VXAX8wBYMj4qsVPTYOH9U2wRSi8KeUU18motcbPGCPbiXEHHRGRIAnGvr3fFYq2KdEsB/zi5uJqISedcuPD0ClR6YmMBFiwIDAQAB",

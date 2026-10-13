@@ -131,7 +131,8 @@ CRM.clients = (() => {
     const phone = c.phone || (chat && chat.id === chatId && chat.phone) || '';
     const name = c.name != null ? c.name : (chat && (chat.name || chat.pushname)) || '';
     const r = await CRM.renewals.forChat(chatId);
-    const cycle = CRM.renewals.initialState(r);
+    const legacy = !editing && !!r; // vencimento antigo sem cadastro: o formulário novo começa vazio
+    const cycle = CRM.renewals.initialState(legacy ? null : r);
     const cents = c.valueCents != null ? c.valueCents : null;
 
     const el = modal(`<div class="modal-head"><h2 class="modal-title">${editing ? 'Editar Cadastro' : 'Cadastrar Cliente'}</h2></div>
@@ -145,7 +146,7 @@ CRM.clients = (() => {
       </div>
       <div class="field"><div class="label">Descrição</div>
         ${CRM.ui.textareaHTML({ name: 'description', placeholder: 'Escreva livremente (ex.: nomes dos servidores)', value: c.description || '' })}</div>
-      ${CRM.renewals.fieldsHTML({ stage: await CRM.renewals.stageText(r) })}
+      ${CRM.renewals.fieldsHTML({ stage: legacy ? CRM.renewals.legacyNotice(r) : await CRM.renewals.stageText(r) })}
       <div class="error-msg" data-error></div>
       <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-save>${editing ? 'Salvar' : 'Cadastrar'}</button></div>`, { wide: true });
 
@@ -165,7 +166,7 @@ CRM.clients = (() => {
         phone: field('phone').value.replace(/\D/g, ''),
         description: field('description').value.trim(),
         valueText: field('value').value.trim(),
-      }, cycle, r, cycleFields);
+      }, cycle, r, cycleFields, { legacy });
       if (result.cancelled) return;
       if (result.error) return (errorBox.textContent = result.error);
       toast(result.message, 'ok');
@@ -175,7 +176,8 @@ CRM.clients = (() => {
 
   // Valida e grava o cadastro + o vencimento. Usado pela janela e pelo painel da direita.
   // Devolve { error }, { cancelled } ou { message }.
-  async function saveAll(chatId, form, cycle, r, cycleFields) {
+  // legacy: o contato só tinha um vencimento antigo (sem cadastro) — sem data, ele é apagado sem perguntar.
+  async function saveAll(chatId, form, cycle, r, cycleFields, { legacy = false } = {}) {
     if (!form.name) return { error: 'Escreva o nome do cliente.' };
     const cents = form.valueText ? parseMoney(form.valueText) : null;
     if (form.valueText && cents == null) return { error: 'Valor inválido. Exemplo: 150,00' };
@@ -184,7 +186,7 @@ CRM.clients = (() => {
       const problem = cycleFields.validate();
       if (problem) return { error: problem };
     }
-    if (!cycle.dueDate && r && !confirm('Tirar o vencimento deste cliente? As mensagens de renovação dele serão apagadas.')) return { cancelled: true };
+    if (!cycle.dueDate && r && !legacy && !confirm('Tirar o vencimento deste cliente? As mensagens de renovação dele serão apagadas.')) return { cancelled: true };
     const existing = await forChat(chatId);
     await saveFor(chatId, { name: form.name, phone: form.phone, description: form.description, valueCents: cents });
     await saveContactName(chatId, form.name);

@@ -140,10 +140,11 @@ CRM.quick = (() => {
         <span class="qsel-ico">${CRM.ui.icon('search', 14, 2)}</span>
         <input class="input qsel-input" autocomplete="off" spellcheck="false" ${replies.length ? '' : 'disabled'}
           placeholder="${replies.length ? 'Digite para procurar (ex.: M, 35)…' : 'Nenhuma mensagem rápida cadastrada'}">
+        <button type="button" class="qsel-eye" data-eye-for="${name}" tabindex="-1" title="Ver o que está escrito">${CRM.ui.icon('eye2', 15)}</button>
         <button type="button" class="qsel-btn" tabindex="-1" title="Ver todas">${CRM.ui.icon('chevDown', 14, 2.2)}</button>
       </div>
       <select class="select qsel-native" name="${name}" tabindex="-1" aria-hidden="true" ${replies.length ? '' : 'disabled'}>${options}</select>
-      <div class="quick-preview muted" data-preview-for="${name}"></div>
+      <div class="quick-preview muted" data-preview-for="${name}" hidden></div>
       <button type="button" class="link-btn" data-new-quick="${name}">+ Nova mensagem rápida</button>
     </div>`;
   }
@@ -151,14 +152,23 @@ CRM.quick = (() => {
   const plainText = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
   // Liga a prévia e a busca de cada seletor dentro de "root".
+  // O campo mostra só o título; o que está escrito aparece ao clicar no olho (e some ao clicar de novo).
   function bindPreview(root, replies) {
     const catsPromise = categories();
     root.querySelectorAll('.quick-card select').forEach((sel) => {
       const box = root.querySelector(`[data-preview-for="${sel.name}"]`);
+      const eye = root.querySelector(`[data-eye-for="${sel.name}"]`);
       const show = () => {
         const q = replies.find((r) => r.id === sel.value);
         box.textContent = q ? q.actions.map(actionSummary).join(' → ') : '';
+        if (eye) eye.disabled = !q;
+        if (!q) box.hidden = true;
+        if (eye) eye.classList.toggle('on', !box.hidden);
       };
+      if (eye) eye.addEventListener('click', () => {
+        box.hidden = !box.hidden || !box.textContent;
+        eye.classList.toggle('on', !box.hidden);
+      });
       sel.addEventListener('change', show);
       show();
       const combo = sel.parentNode.querySelector(`[data-qsel="${sel.name}"]`);

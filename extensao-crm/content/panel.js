@@ -147,7 +147,8 @@ CRM.panel = (() => {
     }
     const c = (await CRM.clients.forChat(chat.id)) || null;
     const r = await CRM.renewals.forChat(chat.id);
-    const cycle = await CRM.renewals.initialState(r);
+    const legacy = !c && !!r; // vencimento antigo sem cadastro: começa vazio
+    const cycle = CRM.renewals.initialState(legacy ? null : r);
     const current = await CRM.tabs.tabOf(chat.id, c && c.kanbanColumnId);
     const phone = (c && c.phone) || chat.phone || '';
     const name = c ? c.name : chat.name || chat.pushname || '';
@@ -161,7 +162,7 @@ CRM.panel = (() => {
       <div class="pf"><div class="pf-label">Valor (lucro)</div><div class="pf-box">${icon('money', 15)}<input name="value" inputmode="decimal" placeholder="R$ 0,00" value="${c && c.valueCents != null ? esc(CRM.clients.formatMoney(c.valueCents)) : ''}"></div></div>
       <div class="pc-tab">${icon('folderGo', 14)} Aba: <b>${esc(current ? current.name : 'nenhuma')}</b></div>
       <div class="pf"><div class="pf-label">Descrição</div><div class="pf-box area">${icon('notes', 15)}<textarea name="description" placeholder="Escreva livremente (ex.: nomes dos servidores)">${esc((c && c.description) || '')}</textarea></div></div>
-      ${CRM.renewals.fieldsHTML({ compact: true, stage: await CRM.renewals.stageText(r) })}
+      ${CRM.renewals.fieldsHTML({ compact: true, stage: legacy ? CRM.renewals.legacyNotice(r) : await CRM.renewals.stageText(r) })}
       <div class="error-msg" data-perr style="min-height:0"></div>
       <button class="btn pc-save" data-psave>${c ? 'Salvar' : 'Cadastrar'}</button>
       <div class="pc-meta">${c ? 'Cadastrado em ' + esc(CRM.util.formatDateTime(c.createdAt)) : 'Este contato ainda não tem cadastro.'}</div>`;
@@ -190,7 +191,7 @@ CRM.panel = (() => {
         phone: field('phone').value.replace(/\D/g, ''),
         description: field('description').value.trim(),
         valueText: field('value').value.trim(),
-      }, cycle, r, cycleFields);
+      }, cycle, r, cycleFields, { legacy });
       if (result.cancelled) return;
       if (result.error) return (err.textContent = result.error);
       dirty = false;

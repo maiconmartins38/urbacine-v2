@@ -226,6 +226,12 @@ CRM.renewals = (() => {
     return '⏸ Automação parada (o cliente foi tirado da aba NUTRIR na mão).';
   }
 
+  // Contato sem cadastro, mas com um vencimento da versão antiga ("Mensagens de Renovação").
+  // O cadastro novo começa vazio e esse vencimento antigo é trocado pelo que for preenchido.
+  function legacyNotice(r) {
+    return `⚠️ Este contato tinha um vencimento antigo (${esc(shortDate(r.dueDate))} às ${esc(r.time)}). Ao cadastrar, ele é trocado pelo que você preencher aqui — ou apagado, se deixar sem data.`;
+  }
+
   function fieldsHTML({ compact = false, stage = '' } = {}) {
     return `<div class="cycle">
       <div class="cycle-title">${icon('renew', 16)} Vencimento e mensagens de renovação
@@ -413,6 +419,6 @@ CRM.renewals = (() => {
 
   return {
     STEPS, STAGE_LABEL, RENEW_DAYS, DAY, addDays, shortDate, monthTab, stageOf, forChat, saveCycle, removeCycle,
-    lifecycle, remarketingConfig, initialState, stageText, fieldsHTML, bindFields, markRenewed, inRemarketing,
+    lifecycle, remarketingConfig, initialState, stageText, legacyNotice, fieldsHTML, bindFields, markRenewed, inRemarketing,
   };
 })();

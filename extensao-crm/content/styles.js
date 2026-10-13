@@ -177,10 +177,13 @@ svg { display: block; }
 audio { width: 100%; height: 34px; margin-top: 8px; }
 
 .quick-card { border-radius: 10px; box-shadow: 0 2px 10px rgba(11, 20, 26, .1); padding: 10px 12px 12px; margin-bottom: 12px; }
-.quick-preview { font-size: 12.5px; white-space: pre-wrap; margin-top: 6px; }
+.quick-preview { font-size: 12.5px; white-space: pre-wrap; margin-top: 6px; max-height: 180px; overflow: auto; background: #f7f8fa; border-radius: 8px; padding: 8px 10px; }
 .qsel { position: relative; display: flex; align-items: center; }
 .qsel-ico { position: absolute; left: 10px; color: #8696a0; display: grid; pointer-events: none; }
-.qsel-input { padding-left: 32px !important; padding-right: 34px !important; }
+.qsel-input { padding-left: 32px !important; padding-right: 64px !important; }
+.qsel-eye { position: absolute; right: 32px; border: 0; background: none; color: #54656f; width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; }
+.qsel-eye:hover:not(:disabled), .qsel-eye.on { background: var(--teal-soft); color: var(--teal); }
+.qsel-eye:disabled { opacity: .35; cursor: default; }
 .qsel-btn { position: absolute; right: 4px; border: 0; background: none; color: #54656f; width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; }
 .qsel-btn:hover { background: #f0f2f5; }
 .qsel-native { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; overflow: hidden; }
