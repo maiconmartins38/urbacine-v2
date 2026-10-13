@@ -14,8 +14,6 @@ CRM.rail = (() => {
     funnel: '<path d="M3.5 5h17l-6.5 7.8V19l-4 1.5v-7.7z"/>',
     robot: '<rect x="5" y="8.5" width="14" height="10.5" rx="3"/><path d="M12 8.5V5.5"/><circle cx="12" cy="4.5" r="1"/><path d="M9.5 13.2h.01M14.5 13.2h.01" stroke-width="2.8"/><path d="M3 12.5v3M21 12.5v3"/>',
     followUp: '<path d="M4 5h16v11.5H9.5L5 20v-3.5H4z"/><path d="M12 8v5.5M9.2 10.8h5.6"/>',
-    status: '<circle cx="12" cy="12" r="9"/><path d="M15.8 10.2a4 4 0 1 0 .2 2.8"/><path d="M16 7.8v2.6h-2.6"/>',
-    api: '<circle cx="12" cy="6.5" r="2"/><circle cx="5.5" cy="17.5" r="2"/><circle cx="18.5" cy="17.5" r="2"/><path d="M12 8.5v4M7.2 16.4L12 12.5l4.8 3.9"/>',
     links: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/>',
     startChat: '<path d="M4.5 13.5a7 6 0 1 1 3 4.4L4 19l1-3.2"/><path d="M13.5 13h7v5h-2l-2.5 2v-2h-2.5z" fill="currentColor"/>',
     youtube: '<rect x="2.5" y="6" width="19" height="12.5" rx="3.6" fill="#ff0000" stroke="none"/><path d="M10 9.6v5.2l4.6-2.6z" fill="#fff" stroke="none"/>',
@@ -33,8 +31,6 @@ CRM.rail = (() => {
     { key: 'funnel', icon: 'funnel', tip: 'Funil CRM', open: () => openPage('funil/index.html') },
     { key: 'autoReply', icon: 'robot', tip: 'Auto Atendimento' },
     { key: 'followUp', icon: 'followUp', tip: 'Follow Up' },
-    { key: 'status', icon: 'status', tip: 'Status' },
-    { key: 'api', icon: 'api', tip: 'API' },
     { key: 'links', icon: 'links', tip: 'Links' },
     { key: 'startChat', icon: 'startChat', tip: 'Iniciar uma conversa' },
   ];

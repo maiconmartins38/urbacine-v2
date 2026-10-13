@@ -1,6 +1,6 @@
 // Janela "Configurações" (engrenagem no fim do menu da esquerda), como no vídeo.
-// Por enquanto só o menu "Geral", com os três botões de backup. O importar já funciona;
-// "Criar backup" e "Backup automático" ainda são só a interface.
+// Por enquanto só o menu "Geral", com os três botões de backup. Criar e importar já funcionam;
+// "Backup automático" ainda é só a interface.
 CRM.settings = (() => {
   const { esc, formatDateTime } = CRM.util;
   const { icon, toast, notice } = CRM.ui;
@@ -96,9 +96,38 @@ CRM.settings = (() => {
       const b = e.target.closest('[data-act]');
       if (!b) return;
       if (b.dataset.act === 'import') return drawImport();
-      const name = b.dataset.act === 'create' ? 'Criar backup do sistema' : 'Backup automático';
-      toast(`"${name}": a tela já está aqui; a função será ligada quando você me mostrar como deve funcionar.`);
+      if (b.dataset.act === 'create') return createBackup(b);
+      toast('"Backup automático": a tela já está aqui; a função será ligada quando você me mostrar como deve funcionar.');
     };
+  }
+
+  // ---------- Criar backup ----------
+  // Baixa um arquivo .json (pasta Downloads) que pode ser importado de volta em "Importar backup do sistema".
+  let creating = false;
+  async function createBackup(button) {
+    if (creating) return;
+    creating = true;
+    const label = button.innerHTML;
+    try {
+      const { blob, counts } = await CRM.backup.createBackup((n, total) => {
+        button.lastChild.textContent = `Criando backup… arquivos ${n} de ${total}`;
+      });
+      const d = new Date();
+      const p = CRM.util.pad;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `backup-crm-whatsapp-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      toast(`Backup criado (${mb(blob.size)}): ${counts.clients || 0} cadastros, ${counts.schedules || 0} agendamentos, ${counts.quickReplies || 0} respostas rápidas e ${counts.media} arquivos. Está na pasta Downloads.`, 'ok');
+    } catch (err) {
+      toast('Não consegui criar o backup: ' + err.message, 'err');
+    } finally {
+      button.innerHTML = label;
+      creating = false;
+    }
   }
 
   // ---------- Importar ----------

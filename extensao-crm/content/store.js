@@ -6,8 +6,11 @@ CRM.store = (() => {
   let queue = Promise.resolve();
 
   // Serializa as escritas para duas alterações seguidas não se atropelarem.
+  // A trava (navigator.locks) vale para todas as abas do WhatsApp Web abertas:
+  // sem ela, duas abas gravando juntas podiam apagar o que a outra acabou de gravar.
   function serial(task) {
-    const run = queue.then(task, task);
+    const locked = () => (navigator.locks ? navigator.locks.request('crm-ext-store', () => task()) : task());
+    const run = queue.then(locked, locked);
     queue = run.catch(() => {});
     return run;
   }
@@ -80,7 +83,8 @@ CRM.store = (() => {
     clearReports: () => serial(() => area.set({ reports: [] })),
 
     getSettings: async () => ({ ...DEFAULT_SETTINGS, ...(await get('settings', {})) }),
-    saveSettings: (settings) => set('settings', settings),
+    // Junta com o que está gravado (na fila travada), para uma aba não desfazer o que a outra mudou.
+    saveSettings: (settings) => update('settings', {}, (current) => ({ ...current, ...settings })),
 
     onChange(callback) {
       chrome.storage.onChanged.addListener((changes, areaName) => {

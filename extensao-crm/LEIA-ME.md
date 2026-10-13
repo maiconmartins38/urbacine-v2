@@ -13,7 +13,7 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 ## Atualizar para uma versão nova
 
 1. Clique com o botão direito no `.zip` novo → **Extrair tudo** → **Extrair**. Abre uma pasta
-   (ex.: `CRM-WhatsApp-0.11.0`) com o `manifest.json` dentro.
+   (ex.: `CRM-WhatsApp-0.12.0`) com o `manifest.json` dentro.
 2. Em `chrome://extensions`, clique em **Carregar sem compactação** e escolha essa pasta.
 3. O cartão "CRM WhatsApp" passa a mostrar a versão nova. Recarregue o WhatsApp Web (F5).
 
@@ -66,6 +66,18 @@ A aba se atualiza sozinha quando um cadastro muda.
 ## Onde ficam os dados
 
 No próprio Chrome (`chrome.storage.local`), só neste computador e neste perfil do Chrome.
+Sem limite de tamanho (permissão `unlimitedStorage`): o limite é o espaço livre do disco.
+Teste de carga: 500 clientes com vencimento, 1.300 agendamentos, 190 respostas rápidas,
+300 anotações e 40 arquivos ocupam ~43 MB (os textos são menos de 1 MB; o resto são os arquivos).
+
+Duas abas do WhatsApp Web abertas ao mesmo tempo gravam em fila (uma não apaga o que a outra gravou).
+
+### Criar backup (engrenagem ⚙ → Geral → Criar backup do sistema)
+
+Baixa um arquivo `backup-crm-whatsapp-AAAA-MM-DD-HHMM.json` na pasta Downloads com tudo:
+cadastros, agendamentos, renovações, respostas rápidas (com imagens, áudios e vídeos), abas,
+anotações e configurações. Guarde uma cópia fora do computador (pen drive, Google Drive).
+Para voltar: **Importar backup do sistema** → escolher o arquivo.
 
 ### Importar backup (engrenagem ⚙ no fim do menu da esquerda → Geral)
 
@@ -88,6 +100,10 @@ No próprio Chrome (`chrome.storage.local`), só neste computador e neste perfil
   números), para ajustar o importador a um formato novo.
 
 ## Técnico
+
+- **Não remova a linha `"key"` do `manifest.json`.** É ela que mantém a identidade da extensão
+  (`dogmggcabeoghehocegimjmojhoangfe`); sem ela, o Chrome trata como outra extensão e os dados
+  não aparecem.
 
 - `page/bridge.js` usa a biblioteca [WA-JS](https://github.com/wppconnect-team/wa-js)
   (Apache-2.0, versão 4.6.1, em `vendor/`) para enviar as mensagens. O Google Analytics

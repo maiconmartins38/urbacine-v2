@@ -399,6 +399,39 @@ CRM.backup = (() => {
   }
 
   // ---------- Backup desta extensão ----------
+  // Criar backup: um arquivo .json com tudo (cadastros, agendamentos, respostas rápidas, abas,
+  // anotações, renovações, configurações e os arquivos). É o mesmo formato que o "Importar" lê.
+  // O arquivo é montado em pedaços (Blob) e os arquivos são lidos um por vez, para não pesar.
+  async function mediaKeys() {
+    const area = chrome.storage.local;
+    const keys = area.getKeys ? await area.getKeys() : Object.keys(await area.get(null));
+    return keys.filter((k) => k.startsWith('media:'));
+  }
+
+  async function createBackup(onProgress) {
+    const data = await chrome.storage.local.get(KEYS);
+    const head = { app: 'crm-whatsapp', type: 'backup', version: chrome.runtime.getManifest().version, createdAt: Date.now() };
+    const parts = [JSON.stringify(head).slice(0, -1) + ',"data":{'];
+    const counts = {};
+    let first = true;
+    for (const k of KEYS) {
+      if (data[k] === undefined) continue;
+      parts.push((first ? '' : ',') + JSON.stringify(k) + ':' + JSON.stringify(data[k]));
+      counts[k] = Array.isArray(data[k]) ? data[k].length : 1;
+      first = false;
+    }
+    const media = await mediaKeys();
+    parts.push((first ? '' : ',') + '"media":{');
+    for (let i = 0; i < media.length; i++) {
+      if (onProgress) onProgress(i + 1, media.length);
+      const m = (await chrome.storage.local.get(media[i]))[media[i]];
+      parts.push((i ? ',' : '') + JSON.stringify(media[i].slice(6)) + ':' + JSON.stringify(m));
+    }
+    parts.push('}}}');
+    counts.media = media.length;
+    return { blob: new Blob(parts, { type: 'application/json' }), counts };
+  }
+
   function summaryCRM(backup) {
     const d = backup.data;
     const rows = KEYS.filter((k) => d[k] !== undefined).map((k) => ({
@@ -874,6 +907,6 @@ CRM.backup = (() => {
   return {
     scanBrowser,
     inspect, parseText, parseBlob, resolveRef, decrypt, unlockAll, describe, isRef,
-    summaryCRM, importCRM, mapForeign, summaryForeign, importForeign, LABELS, KEYS, md5,
+    createBackup, summaryCRM, importCRM, mapForeign, summaryForeign, importForeign, LABELS, KEYS, md5,
   };
 })();
