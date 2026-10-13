@@ -32,17 +32,21 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 
 ## Ciclo de renovação (Cadastro → mês → NUTRIR → REMARKTING)
 
+Tudo no mesmo horário do vencimento (D = dia do vencimento):
+
 1. No **Cadastro** do cliente, preencha o vencimento (data e hora) e as mensagens rápidas
    (1 dia antes e no dia; 1 dia depois). O cliente entra sozinho na aba do mês do vencimento.
-2. Depois que a mensagem de 1 dia depois sai, ele vai para **NUTRIR** e o valor do cadastro é zerado.
-3. Se ficar 3 dias em NUTRIR sem renovar, vai para **REMARKTING**: os envios da renovação são
-   apagados e entra a mensagem do botão **Remarketing**, no dia do vencimento seguinte
-   (30 dias depois), no mesmo horário.
-4. Renovou? Botão **Renovado** (ou abra o Cadastro), confira a nova data e o valor e salve:
-   o cliente volta para a aba do mês e o ciclo recomeça.
+   O nome do cadastro também vira o nome do contato no WhatsApp ("Salvar contato" lá em cima).
+2. Depois da mensagem de D+1, ele vai para **NUTRIR**: o valor é zerado e os envios da renovação
+   são cancelados. Em D+3 recebe a **mensagem de NUTRIR**.
+3. Em D+4 (o quarto dia) sem renovar, vai para **REMARKTING**: a mensagem de NUTRIR some e ele
+   recebe a **mensagem de remarketing**.
+4. Renovou? Botão **Renovado**: escolha 1, 2, 3, 6 ou 12 meses (30 dias cada), confira a data e o
+   valor e confirme. O cliente volta para a aba do mês e o ciclo recomeça.
 
-No botão **Remarketing** dá para escolher a mensagem (texto, mídia, áudio ou mensagem rápida),
-repetir a cada 30 dias, mudar os dias em NUTRIR e ver quem está em NUTRIR e em REMARKTING.
+As mensagens de NUTRIR e de remarketing ficam no botão **Remarketing** e são as mesmas para todos
+os clientes (mudou lá, muda para todo mundo). Lá também dá para mudar os dias (D+3 / D+4), repetir
+o remarketing a cada 30 dias e ver quem está em NUTRIR e em REMARKTING.
 Se você tirar o cliente da aba NUTRIR na mão, a automação dele para.
 
 ## Onde ficam os dados

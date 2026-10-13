@@ -118,8 +118,7 @@ CRM.clients = (() => {
   }
 
   // ---------- Tela: cadastrar / editar ----------
-  // renew: aberto pelo botão "Renovado" (vencimento +30 dias e o valor de antes já preenchidos).
-  async function openForm(existing, { renew = false } = {}) {
+  async function openForm(existing) {
     const chat = CRM.wa.state.activeChat;
     if (!existing && !chat) return toast('Abra a conversa do cliente primeiro.', 'err');
     const editing = !!existing;
@@ -128,10 +127,10 @@ CRM.clients = (() => {
     const phone = c.phone || (chat && chat.id === chatId && chat.phone) || '';
     const name = c.name != null ? c.name : (chat && (chat.name || chat.pushname)) || '';
     const r = await CRM.renewals.forChat(chatId);
-    const cycle = await CRM.renewals.initialState(r, { renew });
-    const cents = c.valueCents != null ? c.valueCents : renew && c.previousValueCents != null ? c.previousValueCents : null;
+    const cycle = CRM.renewals.initialState(r);
+    const cents = c.valueCents != null ? c.valueCents : null;
 
-    const el = modal(`<div class="modal-head"><h2 class="modal-title">${renew ? 'Renovar' : editing ? 'Editar Cadastro' : 'Cadastrar Cliente'}</h2></div>
+    const el = modal(`<div class="modal-head"><h2 class="modal-title">${editing ? 'Editar Cadastro' : 'Cadastrar Cliente'}</h2></div>
       <div class="field"><div class="label">Nome do cliente</div>
         <input class="input" name="name" placeholder="Nome do cliente" value="${esc(name)}"></div>
       <div class="row field">
@@ -144,7 +143,7 @@ CRM.clients = (() => {
         ${CRM.ui.textareaHTML({ name: 'description', placeholder: 'Escreva livremente (ex.: nomes dos servidores)', value: c.description || '' })}</div>
       ${CRM.renewals.fieldsHTML({ stage: await CRM.renewals.stageText(r) })}
       <div class="error-msg" data-error></div>
-      <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-save>${renew ? 'Renovar' : editing ? 'Salvar' : 'Cadastrar'}</button></div>`, { wide: true });
+      <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-save>${editing ? 'Salvar' : 'Cadastrar'}</button></div>`, { wide: true });
 
     const field = (n) => el.querySelector(`[name="${n}"]`);
     const errorBox = el.querySelector('[data-error]');
@@ -155,7 +154,7 @@ CRM.clients = (() => {
     });
     const cycleFields = await CRM.renewals.bindFields(el, cycle);
 
-    el.querySelector('[data-cancel]').addEventListener('click', () => (renew ? CRM.ui.closeModal() : openList()));
+    el.querySelector('[data-cancel]').addEventListener('click', openList);
     el.querySelector('[data-save]').addEventListener('click', async () => {
       const result = await saveAll(chatId, {
         name: field('name').value.trim(),
@@ -166,8 +165,7 @@ CRM.clients = (() => {
       if (result.cancelled) return;
       if (result.error) return (errorBox.textContent = result.error);
       toast(result.message, 'ok');
-      if (renew) CRM.ui.closeModal();
-      else openList();
+      openList();
     });
   }
 
@@ -185,12 +183,31 @@ CRM.clients = (() => {
     if (!cycle.dueDate && r && !confirm('Tirar o vencimento deste cliente? As mensagens de renovação dele serão apagadas.')) return { cancelled: true };
     const existing = await forChat(chatId);
     await saveFor(chatId, { name: form.name, phone: form.phone, description: form.description, valueCents: cents });
+    await saveContactName(chatId, form.name);
+    // O nome do cadastro é o usado no {nome} das mensagens do ciclo.
+    if (r && r.chatName !== form.name) {
+      await store.updateRenewals((list) => list.map((x) => (x.chatId === chatId ? { ...x, chatName: form.name } : x)));
+      await store.updateSchedules((list) => list.map((x) => (x.renewalId && x.chatId === chatId ? { ...x, chatName: form.name } : x)));
+    }
     if (cycle.dueDate && changed) {
       const saved = await CRM.renewals.saveCycle(chatId, { name: form.name, phone: form.phone }, cycle);
       return { message: `${existing ? 'Cadastro salvo' : 'Cliente cadastrado'}: vence ${CRM.renewals.shortDate(saved.dueDate)} às ${saved.time} (aba ${CRM.renewals.monthTab(saved.dueDate)}).` };
     }
     if (!cycle.dueDate && r) await CRM.renewals.removeCycle(chatId);
     return { message: existing ? 'Cadastro atualizado.' : 'Cliente cadastrado.' };
+  }
+
+  // O nome do cadastro também vira o nome do contato no WhatsApp ("Salvar contato" lá em cima).
+  async function saveContactName(chatId, name) {
+    if (!/@c\.us$/.test(chatId) || !name || !CRM.wa.state.ready) return;
+    try {
+      const contact = await CRM.wa.getContact(chatId);
+      if ((contact.name || '') === name) return;
+      await CRM.wa.saveContact(chatId, name);
+      CRM.wa.refreshActiveChat();
+    } catch (err) {
+      toast('Cadastro salvo, mas não consegui salvar o nome no contato do WhatsApp: ' + err.message, 'err');
+    }
   }
 
   // Grava o cadastro da conversa (cria ou atualiza) e põe o cliente na aba do Kanban.

@@ -118,7 +118,14 @@ CRM.schedules = (() => {
       await CRM.quickRun.execute(quick, { chatId: s.chatId, chatName: s.chatName });
       return;
     }
-    // Remarketing: usa a mensagem escolhida no botão "Remarketing" na hora do envio.
+    // NUTRIR e Remarketing: usam as mensagens escolhidas no botão "Remarketing" na hora do envio.
+    if (s.type === 'nutrir') {
+      const cfg = (await store.getSettings()).remarketing || {};
+      const quick = cfg.nutrirQuickId && (await CRM.quick.get(cfg.nutrirQuickId));
+      if (!quick) throw new Error('A mensagem de NUTRIR ainda não foi escolhida (botão Remarketing na conversa).');
+      await CRM.quickRun.execute(quick, { chatId: s.chatId, chatName: s.chatName });
+      return;
+    }
     if (s.type === 'remarketing') {
       const cfg = (await store.getSettings()).remarketing || {};
       if (!['text', 'media', 'audio', 'quick'].includes(cfg.message && cfg.message.type)) {
@@ -132,6 +139,7 @@ CRM.schedules = (() => {
 
   function preview(s) {
     if (s.type === 'remarketing') return '📣 Remarketing';
+    if (s.type === 'nutrir') return '🌱 NUTRIR';
     if (s.type === 'media') return (s.text || '').trim() || '📎 ' + (s.mediaName || 'Arquivo');
     if (s.type === 'audio') return '🎤 Áudio' + (s.audioSeconds ? ' (' + formatDuration(s.audioSeconds) + ')' : '') + ((s.text || '').trim() ? ' + ' + s.text.trim() : '');
     if (s.type === 'quick') return '⚡ ' + (s.quickTitle || 'Mensagem rápida');

@@ -1,14 +1,16 @@
-// Ciclo de renovação do cliente (preenchido no Cadastro) — um "follow-up" automático:
+// Ciclo de renovação do cliente (preenchido no Cadastro) — um "follow-up" automático.
+// Tudo no mesmo horário do vencimento (D = dia do vencimento):
 //
-//   1. Cadastro com vencimento  → o cliente entra na aba do mês (ex.: 11/12 → DEZEMBRO).
-//      Envios: 1 dia antes e no dia → mensagem rápida 1; 1 dia depois → mensagem rápida 2.
-//   2. Depois da mensagem de 1 dia depois → aba NUTRIR, e o valor do cadastro é zerado.
-//   3. N dias (padrão 3) em NUTRIR sem renovar → aba REMARKTING: os envios da renovação são
-//      apagados e entra a mensagem de remarketing (botão "Remarketing") no dia do vencimento
-//      seguinte (30 dias depois), no mesmo horário.
-//   Renovou: abre o Cadastro (ou o botão "Renovado"), coloca a nova data e o valor → recomeça.
+//   1. Cadastro com vencimento → o cliente entra na aba do mês (ex.: 11/12 → DEZEMBRO).
+//      D-1 e D: mensagem rápida 1 · D+1: mensagem rápida 2 (ex.: convite).
+//   2. Depois da mensagem de D+1 → aba NUTRIR: o valor do cadastro é zerado e os envios da
+//      renovação são cancelados. D+3 (padrão): mensagem de NUTRIR (botão "Remarketing").
+//   3. D+4 (padrão, "o quarto dia") sem renovar → aba REMARKTING: a mensagem de NUTRIR some
+//      e o cliente recebe a mensagem de remarketing (botão "Remarketing").
+//   Renovou: botão "Renovado" (soma 1, 2, 3… meses) ou o Cadastro com a nova data → recomeça.
+//   As mensagens de NUTRIR e de remarketing são as mesmas para todos (mudou lá, muda para todos).
 //
-// Os envios usam o mesmo motor das mensagens agendadas (ids "<renovação>:before|due|after|remarketing").
+// Os envios usam o mesmo motor das mensagens agendadas (ids "<renovação>:before|due|after|nutrir|remarketing").
 CRM.renewals = (() => {
   const { esc, uid, toTimestamp, todayISO, formatDateTime, pad } = CRM.util;
   const { icon, toast, notice, infoHTML } = CRM.ui;
@@ -34,10 +36,13 @@ CRM.renewals = (() => {
   const monthTab = (dateISO) => CRM.tabs.MONTHS[Number(dateISO.slice(5, 7)) - 1];
   const stageOf = (r) => (r ? r.stage || 'active' : null);
 
-  // Configuração do remarketing (botão "Remarketing").
+  // Configuração do botão "Remarketing" (vale para todos os clientes).
+  // nutrirDay / remarketingDay = dias depois do vencimento.
   async function remarketingConfig() {
-    const s = await store.getSettings();
-    return { nutrirDays: 3, repeat: false, ...(s.remarketing || {}) };
+    const saved = (await store.getSettings()).remarketing || {};
+    const cfg = { nutrirDay: 3, remarketingDay: 4, repeat: false, nutrirQuickId: '', ...saved };
+    if (saved.nutrirDays && !saved.remarketingDay) cfg.remarketingDay = 1 + saved.nutrirDays; // versão 0.10.0
+    return cfg;
   }
 
   // ---------- Dados ----------
@@ -81,6 +86,31 @@ CRM.renewals = (() => {
     });
   }
 
+  // Envio da etapa NUTRIR ou REMARKTING (a mensagem é lida da configuração na hora do envio).
+  function stageSchedule(r, step, date, extra = {}) {
+    const now = Date.now();
+    return {
+      id: r.id + ':' + step,
+      renewalId: r.id,
+      renewalStep: step,
+      chatId: r.chatId,
+      chatName: r.chatName,
+      chatPhone: r.chatPhone,
+      title: step === 'nutrir' ? 'NUTRIR' : 'Remarketing',
+      type: step,
+      text: '',
+      date,
+      time: r.time,
+      recurrence: 'none',
+      nextAt: toTimestamp(date, r.time),
+      status: 'pending',
+      lastError: '',
+      createdAt: now,
+      updatedAt: now,
+      ...extra,
+    };
+  }
+
   // Grava (ou troca) o vencimento do cliente: o ciclo recomeça e ele vai para a aba do mês.
   async function saveCycle(chatId, chat, { dueDate, time, quick1Id, quick2Id }) {
     const old = await forChat(chatId);
@@ -106,8 +136,6 @@ CRM.renewals = (() => {
     await store.updateRenewals((list) => list.filter((x) => x.chatId !== chatId).concat(r));
     await syncSchedules(r);
     await CRM.tabs.placeInStage(chatId, monthTab(dueDate));
-    const s = await store.getSettings();
-    await store.saveSettings({ ...s, lastCycle: { time, quick1Id, quick2Id } });
     return r;
   }
 
@@ -123,47 +151,25 @@ CRM.renewals = (() => {
   const setStage = (id, stage) =>
     store.updateRenewals((list) => list.map((r) => (r.id === id ? { ...r, stage, stageAt: Date.now(), updatedAt: Date.now() } : r)));
 
-  async function toNutrir(r) {
+  // Entrou em NUTRIR: valor zerado, envios da renovação cancelados e a mensagem de NUTRIR agendada.
+  async function toNutrir(r, cfg) {
     await CRM.tabs.placeInStage(r.chatId, 'NUTRIR');
     await store.updateClients((list) => list.map((c) => (c.chatId === r.chatId && c.valueCents != null
       ? { ...c, previousValueCents: c.valueCents || c.previousValueCents || 0, valueCents: null, updatedAt: Date.now() }
       : c)));
+    await store.updateSchedules((list) => list.filter((s) => s.renewalId !== r.id)
+      .concat(stageSchedule(r, 'nutrir', addDays(r.dueDate, cfg.nutrirDay))));
     await setStage(r.id, 'nutrir');
     notice(`${r.chatName || 'Cliente'} foi para NUTRIR`);
   }
 
-  // Primeiro "dia do vencimento seguinte" (de 30 em 30 dias) que ainda está no futuro.
-  function nextRemarketingDate(r) {
-    let date = addDays(r.dueDate, RENEW_DAYS);
-    while (toTimestamp(date, r.time) <= Date.now()) date = addDays(date, RENEW_DAYS);
-    return date;
-  }
-
+  // Entrou em REMARKTING: a mensagem de NUTRIR some e a de remarketing sai no mesmo horário.
   async function toRemarketing(r, cfg) {
     // Se a pessoa já tirou o cliente da aba NUTRIR na mão, a automação para.
     if (!(await CRM.tabs.isInStage(r.chatId, 'NUTRIR'))) return setStage(r.id, 'stopped');
-    const date = nextRemarketingDate(r);
-    const now = Date.now();
-    await store.updateSchedules((list) => list.filter((s) => s.renewalId !== r.id).concat({
-      id: r.id + ':remarketing',
-      renewalId: r.id,
-      renewalStep: 'remarketing',
-      chatId: r.chatId,
-      chatName: r.chatName,
-      chatPhone: r.chatPhone,
-      title: 'Remarketing',
-      type: 'remarketing',
-      text: '',
-      date,
-      time: r.time,
-      recurrence: cfg.repeat ? 'custom' : 'none',
-      customDays: cfg.repeat ? RENEW_DAYS : null,
-      nextAt: toTimestamp(date, r.time),
-      status: 'pending',
-      lastError: '',
-      createdAt: now,
-      updatedAt: now,
-    }));
+    await store.updateSchedules((list) => list.filter((s) => s.renewalId !== r.id)
+      .concat(stageSchedule(r, 'remarketing', addDays(r.dueDate, cfg.remarketingDay),
+        cfg.repeat ? { recurrence: 'custom', customDays: RENEW_DAYS } : {})));
     await CRM.tabs.placeInStage(r.chatId, 'REMARKTING');
     await setStage(r.id, 'remarketing');
     notice(`${r.chatName || 'Cliente'} foi para REMARKTING`);
@@ -183,9 +189,10 @@ CRM.renewals = (() => {
           // Vai para NUTRIR quando a mensagem de 1 dia depois já saiu (ou não tem mais o que esperar).
           const after = schedules.find((s) => s.id === r.id + ':after');
           const afterAt = toTimestamp(addDays(r.dueDate, 1), r.time);
-          if (now >= afterAt && !(after && (after.status === 'pending' || after.status === 'sending'))) await toNutrir(r);
-        } else if (stage === 'nutrir' && now >= (r.stageAt || 0) + cfg.nutrirDays * DAY) {
-          await toRemarketing(r, cfg);
+          if (now >= afterAt && !(after && (after.status === 'pending' || after.status === 'sending'))) await toNutrir(r, cfg);
+        } else if (stage === 'nutrir' && now >= toTimestamp(addDays(r.dueDate, cfg.remarketingDay), r.time)) {
+          // Espera terminar um envio que esteja saindo agora (ex.: a mensagem de NUTRIR).
+          if (!schedules.some((s) => s.renewalId === r.id && s.status === 'sending')) await toRemarketing(r, cfg);
         }
       }
     } catch (err) {
@@ -197,15 +204,10 @@ CRM.renewals = (() => {
 
   // ---------- Campos do ciclo dentro do Cadastro (janela e painel) ----------
   // state = { dueDate, time, quick1Id, quick2Id }. Data vazia = cliente sem vencimento.
-  async function initialState(r, { renew } = {}) {
-    const last = (await store.getSettings()).lastCycle || {};
-    if (!r) return { dueDate: addDays(todayISO(), RENEW_DAYS), time: last.time || '', quick1Id: last.quick1Id || '', quick2Id: last.quick2Id || '' };
-    let dueDate = r.dueDate;
-    if (renew) {
-      dueDate = addDays(r.dueDate, RENEW_DAYS);
-      if (toTimestamp(dueDate, r.time) <= Date.now()) dueDate = addDays(todayISO(), RENEW_DAYS);
-    }
-    return { dueDate, time: r.time, quick1Id: r.quick1Id, quick2Id: r.quick2Id };
+  // Cliente novo começa vazio: vencimento, hora e mensagens são escolhidos para cada cliente.
+  function initialState(r) {
+    if (!r) return { dueDate: '', time: '', quick1Id: '', quick2Id: '' };
+    return { dueDate: r.dueDate, time: r.time, quick1Id: r.quick1Id, quick2Id: r.quick2Id };
   }
 
   // Texto da etapa atual do cliente (para mostrar no cadastro).
@@ -215,7 +217,7 @@ CRM.renewals = (() => {
     if (stage === 'active') return `📂 ${esc(monthTab(r.dueDate))} · vence ${esc(formatDateTime(toTimestamp(r.dueDate, r.time)))}`;
     if (stage === 'nutrir') {
       const cfg = await remarketingConfig();
-      return `🌱 Em NUTRIR desde ${esc(formatDateTime(r.stageAt))} · vai para REMARKTING em ${esc(formatDateTime((r.stageAt || 0) + cfg.nutrirDays * DAY))} se não renovar`;
+      return `🌱 Em NUTRIR · mensagem de NUTRIR ${esc(formatDateTime(toTimestamp(addDays(r.dueDate, cfg.nutrirDay), r.time)))} · vai para REMARKTING ${esc(formatDateTime(toTimestamp(addDays(r.dueDate, cfg.remarketingDay), r.time)))} se não renovar`;
     }
     if (stage === 'remarketing') {
       const s = (await store.getSchedules()).find((x) => x.id === r.id + ':remarketing');
@@ -266,7 +268,7 @@ CRM.renewals = (() => {
           const q = replies.find((x) => x.id === state[step.quick]);
           return `<div>• ${step.label}: ${esc(formatDateTime(at))} — ⚡ ${esc(q ? quickTitle(q) : 'escolha a mensagem')}${at <= now ? ' <i>(já passou, não será enviada)</i>' : ''}</div>`;
         }).join('') +
-        '<div class="muted" style="margin-top:4px">Depois da mensagem de 1 dia depois: NUTRIR (valor zerado) → REMARKTING se não renovar.</div>';
+        '<div class="muted" style="margin-top:4px">Se não renovar: NUTRIR (valor zerado) e depois REMARKTING, com as mensagens do botão Remarketing.</div>';
     }
 
     function renderQuick() {
@@ -314,13 +316,70 @@ CRM.renewals = (() => {
   }
 
   // ---------- Botão "Renovado" ----------
-  // Abre o Cadastro com o vencimento 30 dias para frente (e o valor de antes, se foi zerado).
+  // Soma 1, 2, 3… meses (30 dias cada) ao vencimento e o ciclo recomeça na aba do mês.
+  // Se o cliente já passou do vencimento (NUTRIR / REMARKTING), conta a partir de hoje.
+  // A data e o valor podem ser mudados antes de confirmar.
+  const PLANS = [1, 2, 3, 6, 12];
+
   async function markRenewed() {
     const chat = CRM.wa.state.activeChat;
     if (!CRM.wa.state.ready || !chat) return toast('Abra a conversa do cliente primeiro.', 'err');
     const r = await forChat(chat.id);
     if (!r) return toast('Este contato ainda não tem vencimento. Coloque a data no Cadastro.', 'err');
-    CRM.clients.openForm(await CRM.clients.forChat(chat.id), { renew: true });
+    const c = await CRM.clients.forChat(chat.id);
+    const late = toTimestamp(r.dueDate, r.time) <= Date.now();
+    const base = late ? todayISO() : r.dueDate;
+    const cents = c && c.valueCents != null ? c.valueCents : c && c.previousValueCents != null ? c.previousValueCents : null;
+    let months = 1;
+
+    const el = CRM.ui.modal(`<div class="modal-head"><h2 class="modal-title">Renovado</h2></div>
+      <div class="cycle-stage" style="margin-bottom:12px"><b>${esc((c && c.name) || r.chatName || 'Cliente')}</b> · ${await stageText(r)}</div>
+      <div class="field"><div class="label">Renovou por</div>
+        <div class="tabs">${PLANS.map((m) => `<button class="tab ${m === 1 ? 'on' : ''}" data-months="${m}">${m} ${m === 1 ? 'mês' : 'meses'}</button>`).join('')}</div></div>
+      <div class="row field">
+        <div><div class="label">Novo vencimento</div><input class="input" type="date" name="newDate"></div>
+        <div><div class="label">Hora</div><input class="input" type="time" name="newTime" value="${esc(r.time)}"></div>
+      </div>
+      <div class="field"><div class="label">Valor (lucro)</div>
+        <input class="input" name="newValue" inputmode="decimal" placeholder="R$ 0,00" value="${cents != null ? esc(CRM.clients.formatMoney(cents)) : ''}"></div>
+      <div class="plan" data-rplan></div>
+      <div class="error-msg" data-error></div>
+      <div class="actions"><button class="btn" data-cancel>Cancelar</button><button class="btn" data-ok>Confirmar renovação</button></div>`);
+    const date = el.querySelector('[name="newDate"]');
+    const time = el.querySelector('[name="newTime"]');
+    const value = el.querySelector('[name="newValue"]');
+    const plan = el.querySelector('[data-rplan]');
+    const renderPlan = () => {
+      plan.innerHTML = date.value
+        ? `Vai para a aba <b>${esc(monthTab(date.value))}</b> e as mensagens de renovação (1 dia antes, no dia e 1 dia depois) são agendadas de novo.`
+        : 'Escolha a data do novo vencimento.';
+    };
+    const setMonths = (m) => {
+      months = m;
+      el.querySelectorAll('[data-months]').forEach((b) => b.classList.toggle('on', Number(b.dataset.months) === m));
+      date.value = addDays(base, RENEW_DAYS * m);
+      renderPlan();
+    };
+    el.querySelectorAll('[data-months]').forEach((b) => b.addEventListener('click', () => setMonths(Number(b.dataset.months))));
+    date.addEventListener('input', renderPlan);
+    value.addEventListener('blur', () => {
+      const v = CRM.clients.parseMoney(value.value);
+      if (v != null) value.value = CRM.clients.formatMoney(v);
+    });
+    el.querySelector('[data-cancel]').addEventListener('click', CRM.ui.closeModal);
+    el.querySelector('[data-ok]').addEventListener('click', async () => {
+      const fail = (m) => (el.querySelector('[data-error]').textContent = m);
+      if (!date.value || !time.value) return fail('Escolha a data e a hora do novo vencimento.');
+      if (toTimestamp(date.value, time.value) <= Date.now()) return fail('O novo vencimento precisa ser no futuro.');
+      const v = value.value.trim() ? CRM.clients.parseMoney(value.value) : null;
+      if (value.value.trim() && v == null) return fail('Valor inválido. Exemplo: 150,00');
+      const name = (c && c.name) || r.chatName || chat.name || '';
+      await CRM.clients.saveFor(chat.id, { name, phone: (c && c.phone) || r.chatPhone || chat.phone || '', valueCents: v, description: (c && c.description) || '' });
+      const saved = await saveCycle(chat.id, { name, phone: r.chatPhone }, { dueDate: date.value, time: time.value, quick1Id: r.quick1Id, quick2Id: r.quick2Id });
+      CRM.ui.closeModal();
+      toast(`Renovado por ${months} ${months === 1 ? 'mês' : 'meses'}! Vence ${shortDate(saved.dueDate)} às ${saved.time} (aba ${monthTab(saved.dueDate)}).`, 'ok');
+    });
+    setMonths(1);
   }
 
   // Badge do botão Remarketing: 1 se o contato está em REMARKTING.

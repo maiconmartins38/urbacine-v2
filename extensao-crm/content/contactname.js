@@ -64,7 +64,8 @@ CRM.contactName = (() => {
       // segue com o nome da conversa
     }
     const settings = await store.getSettings();
-    const current = contact.name || contact.pushname || chat.name || '';
+    const client = await CRM.clients.forChat(chat.id);
+    const current = contact.name || (client && client.name) || contact.pushname || chat.name || '';
 
     const el = modal(`<div class="modal-head"><h2 class="modal-title">Salvar contato</h2></div>
       <p class="confirm-text" style="font-size:13.5px;margin-top:-4px">Salve o nome do contato ou adicione a opção de salvamento automático caso o contato tenha um nome</p>
@@ -96,8 +97,14 @@ CRM.contactName = (() => {
       errorBox.textContent = 'Salvando…';
       try {
         await CRM.wa.saveContact(chat.id, name);
+        // O nome vai junto para o Cadastro do cliente (se ele tiver cadastro).
+        if (client && client.name !== name) {
+          await store.updateClients((list) => list.map((c) => (c.chatId === chat.id ? { ...c, name, updatedAt: Date.now() } : c)));
+          await store.updateRenewals((list) => list.map((r) => (r.chatId === chat.id ? { ...r, chatName: name } : r)));
+          await store.updateSchedules((list) => list.map((s) => (s.renewalId && s.chatId === chat.id ? { ...s, chatName: name } : s)));
+        }
         CRM.ui.closeModal();
-        notice('Contato salvo');
+        notice(client ? 'Contato salvo (cadastro atualizado)' : 'Contato salvo');
         CRM.wa.refreshActiveChat();
       } catch (err) {
         errorBox.textContent = 'Não consegui salvar: ' + err.message;

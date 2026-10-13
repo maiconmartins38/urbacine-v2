@@ -1,9 +1,10 @@
 // Botão "Remarketing" da conversa (no lugar de "Mensagens de Renovação"):
-// escolhe a mensagem que os clientes em REMARKTING recebem (texto, mídia, áudio ou mensagem
-// rápida), quando ela sai, e mostra quem está em NUTRIR e em REMARKTING.
+// escolhe as mensagens padrão do ciclo, iguais para todos os clientes — a de NUTRIR (mensagem
+// rápida) e a de REMARKTING (texto, mídia, áudio ou mensagem rápida) —, em que dia saem, e
+// mostra quem está em NUTRIR e em REMARKTING.
 // O ciclo em si fica em renewals.js; o envio, no motor das mensagens agendadas.
 CRM.remarketing = (() => {
-  const { esc, uid, formatDateTime, formatDuration } = CRM.util;
+  const { esc, uid, formatDateTime, formatDuration, toTimestamp } = CRM.util;
   const { icon, modal, toast, notice, attachEmoji, textareaHTML, infoHTML } = CRM.ui;
   const store = CRM.store;
   const R = () => CRM.renewals;
@@ -12,8 +13,10 @@ CRM.remarketing = (() => {
     .rm-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; margin: -4px 0 14px; color: #3b4a54; }
     .rm-flow b { background: #eef0f3; border-radius: 6px; padding: 3px 7px; color: #111b21; }
     .rm-flow .arrow { color: var(--muted); }
-    .rm-days { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: #3b4a54; }
+    .rm-days { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; color: #3b4a54; }
     .rm-days input { width: 70px; }
+    .rm-box { border: 1px solid #e3e8ea; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+    .rm-box > .label { font-weight: 700; color: #111b21; font-size: 13.5px; }
     .rm-section { margin-top: 18px; border-top: 1px solid #eef0f2; padding-top: 12px; }
     .rm-section h3 { font-size: 14px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
     .rm-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid #e9edef; border-radius: 8px; margin-bottom: 6px; font-size: 12.5px; }
@@ -43,7 +46,7 @@ CRM.remarketing = (() => {
     const renewals = await store.getRenewals();
     const schedules = await store.getSchedules();
     const chat = CRM.wa.state.activeChat;
-    const DAY = R().DAY;
+    const at = (r, day) => esc(formatDateTime(toTimestamp(R().addDays(r.dueDate, day), r.time)));
 
     const rowHTML = (r, when) => `<div class="rm-row ${chat && chat.id === r.chatId ? 'me' : ''}">
         <span class="who">${esc(r.chatName || r.chatPhone || 'Contato')}</span>
@@ -55,27 +58,28 @@ CRM.remarketing = (() => {
       return rowHTML(r, when);
     });
     const nutrir = renewals.filter((r) => R().stageOf(r) === 'nutrir')
-      .map((r) => rowHTML(r, 'vai para REMARKTING em ' + esc(formatDateTime((r.stageAt || 0) + cfg.nutrirDays * DAY))));
+      .map((r) => rowHTML(r, `mensagem de NUTRIR ${at(r, cfg.nutrirDay)} · REMARKTING ${at(r, cfg.remarketingDay)}`));
 
     const el = modal(`<style>${CSS}</style>
       <div class="modal-head"><h2 class="modal-title">Remarketing</h2></div>
-      <div class="rm-flow"><b>📂 Aba do mês</b><span class="arrow">→ 1 dia depois do vencimento →</span><b>🌱 NUTRIR</b><span class="muted">(valor zerado)</span>
-        <span class="arrow">→ ${cfg.nutrirDays} dias sem renovar →</span><b>📣 REMARKTING</b></div>
-      <div class="field">
-        <div class="label">Mensagem de remarketing ${infoHTML('Todos que entram na aba REMARKTING recebem esta mensagem. Use <b>{nome}</b> para o primeiro nome do contato.')}</div>
+      <div class="rm-flow"><b>📂 Aba do mês</b><span class="arrow">→ 1 dia depois →</span><b>🌱 NUTRIR</b><span class="muted">(valor zerado)</span>
+        <span class="arrow">→ dia ${cfg.nutrirDay}: mensagem de NUTRIR → dia ${cfg.remarketingDay} →</span><b>📣 REMARKTING</b><span class="muted">+ mensagem de remarketing</span></div>
+      <div class="rm-box" data-nutrir-box>
+        <div class="label">🌱 Mensagem de NUTRIR ${infoHTML('Padrão para todos os clientes que estão na aba NUTRIR. Se mudar aqui, muda para todo mundo.')}</div>
+        <div data-nutrir-pick></div>
+        <div class="rm-days">Enviar <input class="input" type="number" min="2" max="60" name="nutrirDay" value="${esc(cfg.nutrirDay)}"> dias depois do vencimento, no mesmo horário.</div>
+      </div>
+      <div class="rm-box">
+        <div class="label">📣 Mensagem de remarketing ${infoHTML('Padrão para todos que entram na aba REMARKTING. Use <b>{nome}</b> para o primeiro nome do contato.')}</div>
         <div class="tabs">
           <button class="tab" data-type="text">Criar texto</button>
           <button class="tab" data-type="media">Mídia</button>
           <button class="tab" data-type="audio">Áudio</button>
           <button class="tab" data-type="quick">Selecionar mensagem rápida</button>
         </div>
-      </div>
-      <div class="field" data-pane></div>
-      <div class="field">
-        <div class="label">Quando enviar</div>
-        <div class="plan">No dia do vencimento seguinte (30 dias depois do vencimento do cliente), no mesmo horário das mensagens de renovação.</div>
-        <button type="button" class="check ${cfg.repeat ? 'on' : ''}" data-repeat><span class="dot">${icon('check', 11, 3)}</span>Repetir a cada 30 dias enquanto o cliente estiver em REMARKTING</button>
-        <div class="rm-days">Dias em NUTRIR antes de ir para REMARKTING: <input class="input" type="number" min="1" max="60" name="nutrirDays" value="${esc(cfg.nutrirDays)}"></div>
+        <div class="field" data-pane style="margin-top:10px"></div>
+        <div class="rm-days">Ir para REMARKTING e enviar <input class="input" type="number" min="3" max="90" name="remarketingDay" value="${esc(cfg.remarketingDay)}"> dias depois do vencimento, no mesmo horário.</div>
+        <button type="button" class="check ${cfg.repeat ? 'on' : ''}" data-repeat style="margin-top:10px"><span class="dot">${icon('check', 11, 3)}</span>Repetir a cada 30 dias enquanto o cliente estiver em REMARKTING</button>
       </div>
       <div class="error-msg" data-error></div>
       <div class="actions"><button class="btn" data-cancel>Fechar</button><button class="btn" data-save>Salvar</button></div>
@@ -85,6 +89,20 @@ CRM.remarketing = (() => {
 
     const pane = el.querySelector('[data-pane]');
     const errorBox = el.querySelector('[data-error]');
+    let nutrirQuickId = cfg.nutrirQuickId || '';
+
+    function renderNutrir() {
+      const box = el.querySelector('[data-nutrir-pick]');
+      box.innerHTML = CRM.quick.selectHTML({ name: 'nutrirQuick', label: 'Mensagem rápida', selectedId: nutrirQuickId, replies });
+      CRM.quick.bindPreview(box, replies);
+      box.querySelector('select').onchange = (e) => (nutrirQuickId = e.target.value);
+      box.querySelector('[data-new-quick]').onclick = () => CRM.quick.openQuickForm(async (item) => {
+        replies = await CRM.quick.list();
+        nutrirQuickId = item.id;
+        renderNutrir();
+        renderPane();
+      });
+    }
 
     function mediaChip() {
       if (state.media) {
@@ -198,8 +216,11 @@ CRM.remarketing = (() => {
     el.querySelector('[data-save]').addEventListener('click', async () => {
       const fail = (m) => (errorBox.textContent = m);
       if (recorder) return fail('Pare a gravação antes de salvar.');
-      const days = parseInt(el.querySelector('[name="nutrirDays"]').value, 10);
-      if (!(days >= 1 && days <= 60)) return fail('Dias em NUTRIR: de 1 a 60.');
+      const nutrirDay = parseInt(el.querySelector('[name="nutrirDay"]').value, 10);
+      const remarketingDay = parseInt(el.querySelector('[name="remarketingDay"]').value, 10);
+      if (!replies.some((q) => q.id === nutrirQuickId)) return fail('Escolha a mensagem de NUTRIR.');
+      if (!(nutrirDay >= 2 && nutrirDay <= 60)) return fail('A mensagem de NUTRIR sai de 2 a 60 dias depois do vencimento.');
+      if (!(remarketingDay > nutrirDay && remarketingDay <= 90)) return fail('O REMARKTING precisa ser depois da mensagem de NUTRIR (até 90 dias).');
       const text = state.text.trim();
       const message = { type: state.type, text };
       if (state.type === 'text' && !text) return fail('Escreva a mensagem.');
@@ -233,14 +254,25 @@ CRM.remarketing = (() => {
 
       const repeat = repeatBtn.classList.contains('on');
       const settings = await store.getSettings();
-      await store.saveSettings({ ...settings, remarketing: { ...(settings.remarketing || {}), message, repeat, nutrirDays: days } });
+      const { nutrirDays, ...rest } = settings.remarketing || {};
+      await store.saveSettings({ ...settings, remarketing: { ...rest, message, repeat, nutrirQuickId, nutrirDay, remarketingDay } });
+      // Quem já está em NUTRIR passa a usar os dias novos.
+      const renewalsNow = await store.getRenewals();
+      await store.updateSchedules((list) => list.map((s) => {
+        if (s.renewalStep !== 'nutrir' || s.status !== 'pending') return s;
+        const r = renewalsNow.find((x) => x.id === s.renewalId);
+        if (!r) return s;
+        const date = R().addDays(r.dueDate, nutrirDay);
+        return { ...s, date, nextAt: toTimestamp(date, r.time) };
+      }));
       // A repetição vale também para quem já está em REMARKTING.
       await store.updateSchedules((list) => list.map((s) => (s.renewalStep === 'remarketing'
         ? { ...s, recurrence: repeat ? 'custom' : 'none', customDays: repeat ? R().RENEW_DAYS : null } : s)));
-      toast('Remarketing salvo.', 'ok');
+      toast('Mensagens de NUTRIR e remarketing salvas (valem para todos).', 'ok');
       CRM.ui.closeModal();
     });
 
+    renderNutrir();
     renderPane();
   }
 
