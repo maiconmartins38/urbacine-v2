@@ -210,26 +210,31 @@ CRM.renewals = (() => {
     return { dueDate: r.dueDate, time: r.time, quick1Id: r.quick1Id, quick2Id: r.quick2Id };
   }
 
-  // Texto da etapa atual do cliente (para mostrar no cadastro).
-  async function stageText(r) {
-    if (!r) return '';
+  // Etapa atual do cliente (para mostrar no cadastro): ícone da ferramenta + texto.
+  async function stageInfo(r) {
     const stage = stageOf(r);
-    if (stage === 'active') return `📂 ${esc(monthTab(r.dueDate))} · vence ${esc(formatDateTime(toTimestamp(r.dueDate, r.time)))}`;
+    if (stage === 'active') return { ic: 'folderGo', text: `${esc(monthTab(r.dueDate))} · vence ${esc(formatDateTime(toTimestamp(r.dueDate, r.time)))}` };
     if (stage === 'nutrir') {
       const cfg = await remarketingConfig();
-      return `🌱 Em NUTRIR · mensagem de NUTRIR ${esc(formatDateTime(toTimestamp(addDays(r.dueDate, cfg.nutrirDay), r.time)))} · vai para REMARKTING ${esc(formatDateTime(toTimestamp(addDays(r.dueDate, cfg.remarketingDay), r.time)))} se não renovar`;
+      return { ic: 'sprout', text: `Em NUTRIR · mensagem de NUTRIR ${esc(formatDateTime(toTimestamp(addDays(r.dueDate, cfg.nutrirDay), r.time)))} · vai para REMARKTING ${esc(formatDateTime(toTimestamp(addDays(r.dueDate, cfg.remarketingDay), r.time)))} se não renovar` };
     }
     if (stage === 'remarketing') {
       const s = (await store.getSchedules()).find((x) => x.id === r.id + ':remarketing');
-      return `📣 Em REMARKTING${s ? ` · mensagem de remarketing ${s.status === 'pending' ? 'em' : 'enviada'} ${esc(formatDateTime(s.status === 'pending' ? s.nextAt : s.lastRunAt || s.nextAt))}` : ''}`;
+      return { ic: 'megaphone', text: `Em REMARKTING${s ? ` · mensagem de remarketing ${s.status === 'pending' ? 'em' : 'enviada'} ${esc(formatDateTime(s.status === 'pending' ? s.nextAt : s.lastRunAt || s.nextAt))}` : ''}` };
     }
-    return '⏸ Automação parada (o cliente foi tirado da aba NUTRIR na mão).';
+    return { ic: 'stopCircle', text: 'Automação parada (o cliente foi tirado da aba NUTRIR na mão).' };
+  }
+
+  async function stageText(r, prefix = '') {
+    if (!r) return '';
+    const { ic, text } = await stageInfo(r);
+    return `${icon(ic, 15)}<span>${prefix}${text}</span>`;
   }
 
   // Contato sem cadastro, mas com um vencimento da versão antiga ("Mensagens de Renovação").
   // O cadastro novo começa vazio e esse vencimento antigo é trocado pelo que for preenchido.
   function legacyNotice(r) {
-    return `⚠️ Este contato tinha um vencimento antigo (${esc(shortDate(r.dueDate))} às ${esc(r.time)}). Ao cadastrar, ele é trocado pelo que você preencher aqui — ou apagado, se deixar sem data.`;
+    return `${icon('info', 15)}<span>Este contato tinha um vencimento antigo (${esc(shortDate(r.dueDate))} às ${esc(r.time)}). Ao cadastrar, ele é trocado pelo que você preencher aqui — ou apagado, se deixar sem data.</span>`;
   }
 
   function fieldsHTML({ compact = false, stage = '' } = {}) {
@@ -341,7 +346,7 @@ CRM.renewals = (() => {
     let months = 1;
 
     const el = CRM.ui.modal(`<div class="modal-head"><h2 class="modal-title">Renovado</h2></div>
-      <div class="cycle-stage" style="margin-bottom:12px"><b>${esc((c && c.name) || r.chatName || 'Cliente')}</b> · ${await stageText(r)}</div>
+      <div class="cycle-stage" style="margin-bottom:12px">${await stageText(r, `<b>${esc((c && c.name) || r.chatName || 'Cliente')}</b> · `)}</div>
       <div class="field"><div class="label">Renovou por</div>
         <div class="tabs">${PLANS.map((m) => `<button class="tab ${m === 1 ? 'on' : ''}" data-months="${m}">${m} ${m === 1 ? 'mês' : 'meses'}</button>`).join('')}</div></div>
       <div class="row field">

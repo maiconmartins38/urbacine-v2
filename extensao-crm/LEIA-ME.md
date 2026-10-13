@@ -13,7 +13,7 @@ Etapa 1: **Mensagens Agendadas** e **Anotações**, dentro do WhatsApp Web.
 ## Atualizar para uma versão nova
 
 1. Clique com o botão direito no `.zip` novo → **Extrair tudo** → **Extrair**. Abre uma pasta
-   (ex.: `CRM-WhatsApp-0.10.1`) com o `manifest.json` dentro.
+   (ex.: `CRM-WhatsApp-0.10.4`) com o `manifest.json` dentro.
 2. Em `chrome://extensions`, clique em **Carregar sem compactação** e escolha essa pasta.
 3. O cartão "CRM WhatsApp" passa a mostrar a versão nova. Recarregue o WhatsApp Web (F5).
 

@@ -52,7 +52,7 @@ CRM.clients = (() => {
       (a.name || '').localeCompare(b.name || '', 'pt-BR')
     );
     const canAdd = chat && !all.some((c) => c.chatId === chat.id);
-    const tabNames = Object.fromEntries((await CRM.tabs.list()).map((t) => [t.id, t.name]));
+    const tabs = await CRM.tabs.list();
     const cycles = Object.fromEntries((await store.getRenewals()).map((r) => [r.chatId, r]));
 
     const head = `<div class="modal-head">
@@ -63,7 +63,7 @@ CRM.clients = (() => {
     </div>`;
 
     const body = list.length
-      ? `<div class="list">${list.map((c) => itemHTML(c, tabNames, cycles[c.chatId])).join('')}</div>
+      ? `<div class="list">${list.map((c) => itemHTML(c, tabs, cycles[c.chatId])).join('')}</div>
          <div class="center">${canAdd ? '<button class="btn" data-add>Adicionar</button>' : ''}</div>`
       : `<div class="empty">
           <div class="empty-icon">${icon('client', 24)}</div>
@@ -96,28 +96,41 @@ CRM.clients = (() => {
     );
   }
 
-  function itemHTML(c, tabNames = {}, r = null) {
+  // Cartão do cliente: nome e situação no topo, e os dados numa tabela com os ícones da ferramenta.
+  function itemHTML(c, tabs = [], r = null) {
     const R = CRM.renewals;
     const stage = R.stageOf(r);
-    return `<div class="item">
-      <div class="item-icon">${icon('client', 18)}</div>
-      <div class="item-body">
-        <div class="item-title">${esc(c.name || 'Sem nome')}</div>
-        <div class="item-meta">
-          ${c.phone ? `<span>📞 ${esc(formatPhone(c.phone))}</span>` : ''}
-          <span>💰 ${c.valueCents != null ? esc(formatMoney(c.valueCents)) : 'sem valor'}</span>
-          <span>📂 ${esc(tabNames[c.kanbanColumnId] || 'Nenhuma aba')}</span>
+    const name = c.name || 'Sem nome';
+    const initials = (name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || '?').toUpperCase();
+    const inTabs = tabs.filter((t) => (t.chatIds || []).includes(c.chatId)).map((t) => t.name);
+    const cell = (ic, label, value, extra = '') =>
+      `<div class="cc-cell${extra}"><div class="cc-label">${icon(ic, 14)}${label}</div><div class="cc-value">${value}</div></div>`;
+    const value = c.valueCents != null
+      ? esc(formatMoney(c.valueCents))
+      : `<span class="cc-none">sem valor</span>${c.previousValueCents ? ` <span class="cc-none">(antes ${esc(formatMoney(c.previousValueCents))})</span>` : ''}`;
+    return `<div class="cc">
+      <div class="cc-head">
+        <div class="cc-avatar">${esc(initials)}</div>
+        <div class="cc-who">
+          <div class="cc-name">${esc(name)}</div>
+          <div class="cc-tags">
+            ${r ? `<span class="cc-chip ${stage}">${esc(R.STAGE_LABEL[stage] || stage)}</span>` : '<span class="cc-chip none">Sem vencimento</span>'}
+            ${r && r.renewCount ? `<span class="cc-chip renewed">${icon('renewed', 12, 2)}Renovou ${r.renewCount}x</span>` : ''}
+          </div>
         </div>
-        ${r ? `<div class="item-meta"><span>📅 Vence ${esc(R.shortDate(r.dueDate))} às ${esc(r.time)}</span>
-          ${stage !== 'active' ? `<span class="status ${stage === 'remarketing' ? 'error' : 'pending'}">${esc(R.STAGE_LABEL[stage] || stage)}</span>` : ''}
-          ${r.renewCount ? `<span>✅ Renovou ${r.renewCount}x</span>` : ''}</div>` : ''}
-        ${c.description ? `<div class="item-text" style="margin-top:4px">${esc(c.description)}</div>` : ''}
-        <div class="item-meta"><span>Cadastrado em ${esc(formatDateTime(c.createdAt))}</span></div>
+        <div class="item-actions">
+          <button class="icon-btn" data-edit="${c.id}" title="Editar">${icon('edit', 17)}</button>
+          <button class="icon-btn danger" data-del="${c.id}" title="Excluir">${icon('trash', 17)}</button>
+        </div>
       </div>
-      <div class="item-actions">
-        <button class="icon-btn" data-edit="${c.id}" title="Editar">${icon('edit', 17)}</button>
-        <button class="icon-btn danger" data-del="${c.id}" title="Excluir">${icon('trash', 17)}</button>
+      <div class="cc-grid">
+        ${cell('contactCard', 'Telefone', c.phone ? esc(formatPhone(c.phone)) : '<span class="cc-none">sem número</span>')}
+        ${cell('money', 'Valor', value)}
+        ${cell('folderGo', 'Aba', inTabs.length ? esc(inTabs.join(', ')) : '<span class="cc-none">nenhuma</span>')}
+        ${cell('schedule', 'Vencimento', r ? `${esc(R.shortDate(r.dueDate))} <span class="cc-none">às</span> ${esc(r.time)}` : '<span class="cc-none">sem vencimento</span>')}
+        ${c.description ? cell('notes', 'Descrição', `<span class="cc-desc">${esc(c.description)}</span>`, ' wide') : ''}
       </div>
+      <div class="cc-foot">${icon('clock', 13)}Cadastrado em ${esc(formatDateTime(c.createdAt))}</div>
     </div>`;
   }
 
@@ -204,13 +217,15 @@ CRM.clients = (() => {
   }
 
   // O nome do cadastro também vira o nome do contato no WhatsApp ("Salvar contato" lá em cima).
+  // Vale para número (@c.us) e para os ids novos do WhatsApp (@lid); grupos e canais ficam de fora.
   async function saveContactName(chatId, name) {
-    if (!/@c\.us$/.test(chatId) || !name || !CRM.wa.state.ready) return;
+    if (!name || !CRM.wa.state.ready || /@(g\.us|newsletter|broadcast)$/.test(chatId)) return;
     try {
-      const contact = await CRM.wa.getContact(chatId);
-      if ((contact.name || '') === name) return;
+      const contact = await CRM.wa.getContact(chatId).catch(() => null);
+      if (contact && contact.isMyContact && contact.name === name) return;
       await CRM.wa.saveContact(chatId, name);
-      CRM.wa.refreshActiveChat();
+      await CRM.wa.refreshActiveChat();
+      if (CRM.contactName) CRM.contactName.place();
     } catch (err) {
       toast('Cadastro salvo, mas não consegui salvar o nome no contato do WhatsApp: ' + err.message, 'err');
     }

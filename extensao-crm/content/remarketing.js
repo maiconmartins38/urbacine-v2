@@ -11,7 +11,8 @@ CRM.remarketing = (() => {
 
   const CSS = `
     .rm-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; margin: -4px 0 14px; color: #3b4a54; }
-    .rm-flow b { background: #eef0f3; border-radius: 6px; padding: 3px 7px; color: #111b21; }
+    .rm-flow b { background: #eef0f3; border-radius: 6px; padding: 3px 7px; color: #111b21; display: inline-flex; align-items: center; gap: 4px; }
+    .rm-flow b svg, .rm-section h3 svg, .rm-box .label svg { color: var(--teal); }
     .rm-flow .arrow { color: var(--muted); }
     .rm-days { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; color: #3b4a54; }
     .rm-days input { width: 70px; }
@@ -62,15 +63,15 @@ CRM.remarketing = (() => {
 
     const el = modal(`<style>${CSS}</style>
       <div class="modal-head"><h2 class="modal-title">Remarketing</h2></div>
-      <div class="rm-flow"><b>📂 Aba do mês</b><span class="arrow">→ 1 dia depois →</span><b>🌱 NUTRIR</b><span class="muted">(valor zerado)</span>
-        <span class="arrow">→ dia ${cfg.nutrirDay}: mensagem de NUTRIR → dia ${cfg.remarketingDay} →</span><b>📣 REMARKTING</b><span class="muted">+ mensagem de remarketing</span></div>
+      <div class="rm-flow"><b>${icon('folderGo', 13)}Aba do mês</b><span class="arrow">→ 1 dia depois →</span><b>${icon('sprout', 13)}NUTRIR</b><span class="muted">(valor zerado)</span>
+        <span class="arrow">→ dia ${cfg.nutrirDay}: mensagem de NUTRIR → dia ${cfg.remarketingDay} →</span><b>${icon('megaphone', 13)}REMARKTING</b><span class="muted">+ mensagem de remarketing</span></div>
       <div class="rm-box" data-nutrir-box>
-        <div class="label">🌱 Mensagem de NUTRIR ${infoHTML('Padrão para todos os clientes que estão na aba NUTRIR. Se mudar aqui, muda para todo mundo.')}</div>
+        <div class="label">${icon('sprout', 14)} Mensagem de NUTRIR ${infoHTML('Padrão para todos os clientes que estão na aba NUTRIR. Se mudar aqui, muda para todo mundo.')}</div>
         <div data-nutrir-pick></div>
         <div class="rm-days">Enviar <input class="input" type="number" min="2" max="60" name="nutrirDay" value="${esc(cfg.nutrirDay)}"> dias depois do vencimento, no mesmo horário.</div>
       </div>
       <div class="rm-box">
-        <div class="label">📣 Mensagem de remarketing ${infoHTML('Padrão para todos que entram na aba REMARKTING. Use <b>{nome}</b> para o primeiro nome do contato.')}</div>
+        <div class="label">${icon('megaphone', 14)} Mensagem de remarketing ${infoHTML('Padrão para todos que entram na aba REMARKTING. Use <b>{nome}</b> para o primeiro nome do contato.')}</div>
         <div class="tabs">
           <button class="tab" data-type="text">Criar texto</button>
           <button class="tab" data-type="media">Mídia</button>
@@ -83,8 +84,8 @@ CRM.remarketing = (() => {
       </div>
       <div class="error-msg" data-error></div>
       <div class="actions"><button class="btn" data-cancel>Fechar</button><button class="btn" data-save>Salvar</button></div>
-      <div class="rm-section"><h3>📣 Em REMARKTING (${remk.length})</h3>${remk.join('') || '<div class="rm-empty">Ninguém por enquanto.</div>'}</div>
-      <div class="rm-section"><h3>🌱 Em NUTRIR (${nutrir.length})</h3>${nutrir.join('') || '<div class="rm-empty">Ninguém por enquanto.</div>'}</div>`,
+      <div class="rm-section"><h3>${icon('megaphone', 16)}Em REMARKTING (${remk.length})</h3>${remk.join('') || '<div class="rm-empty">Ninguém por enquanto.</div>'}</div>
+      <div class="rm-section"><h3>${icon('sprout', 16)}Em NUTRIR (${nutrir.length})</h3>${nutrir.join('') || '<div class="rm-empty">Ninguém por enquanto.</div>'}</div>`,
       { wide: true, onClose: stopRecording });
 
     const pane = el.querySelector('[data-pane]');

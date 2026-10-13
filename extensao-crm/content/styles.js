@@ -102,7 +102,9 @@ svg { display: block; }
 .cycle { border: 1px solid #d7e9e6; border-radius: 10px; padding: 10px 12px 6px; margin: 4px 0 12px; background: #f7fbfa; }
 .cycle-title { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13.5px; margin-bottom: 8px; color: #1c4f4a; }
 .cycle-title svg { color: var(--teal); }
-.cycle-stage { font-size: 12px; background: var(--teal-soft); border-radius: 7px; padding: 6px 8px; margin-bottom: 10px; color: #1c4f4a; }
+.cycle-stage { font-size: 12px; background: var(--teal-soft); border-radius: 7px; padding: 6px 8px; margin-bottom: 10px; color: #1c4f4a;
+  display: flex; align-items: flex-start; gap: 6px; }
+.cycle-stage svg { flex: none; color: var(--teal); margin-top: 1px; }
 
 /* ---------- Estado vazio ---------- */
 .empty { text-align: center; padding: 6px 10px 4px; color: var(--muted); }
@@ -228,6 +230,41 @@ audio { width: 100%; height: 34px; margin-top: 8px; }
 .center { text-align: center; }
 .muted { color: var(--muted); }
 .note-card { background: #fff8d6; border-color: #f3e3a1; }
+
+/* ---------- Cartão do cliente (Cadastro) ---------- */
+.cc { border: 1px solid #e9edef; border-radius: 12px; background: #fff; overflow: hidden; }
+.cc-head { display: flex; align-items: center; gap: 12px; padding: 12px 10px 12px 14px; }
+.cc-avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--teal-soft); color: var(--teal-dark); font-weight: 700; font-size: 15px;
+}
+.cc-who { flex: 1; min-width: 0; }
+.cc-name { font-weight: 700; font-size: 15px; color: #111b21; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.cc-chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+  border-radius: 20px; padding: 2px 9px; background: var(--teal-soft); color: var(--teal-dark);
+}
+.cc-chip.nutrir { background: #fff4d6; color: #8a6400; }
+.cc-chip.remarketing { background: #fdecea; color: #b03a35; }
+.cc-chip.stopped, .cc-chip.none { background: #eef1f3; color: #54656f; }
+.cc-chip.renewed { background: #e7f6ec; color: #1e7e45; }
+.cc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #e9edef; border-top: 1px solid #e9edef; }
+.cc-cell { background: #fff; padding: 9px 14px 10px; min-width: 0; }
+.cc-cell.wide { grid-column: 1 / -1; }
+.cc-label {
+  display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .03em; margin-bottom: 3px;
+}
+.cc-label svg { color: var(--teal); flex: none; }
+.cc-value { font-size: 13.5px; font-weight: 600; color: #111b21; overflow-wrap: anywhere; }
+.cc-none { color: var(--muted); font-weight: 400; }
+.cc-desc { display: block; font-weight: 400; color: #3b4a54; white-space: pre-wrap; }
+.cc-foot {
+  display: flex; align-items: center; gap: 5px; padding: 7px 14px; font-size: 11.5px; color: var(--muted);
+  background: #f7f8fa; border-top: 1px solid #e9edef;
+}
+.cc-foot svg { color: var(--teal); }
 
 /* ---------- Emojis ---------- */
 .emoji-pop {
